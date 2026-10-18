@@ -1,0 +1,327 @@
+<Window x:Class="EveWatch.App.Windows.IntelAlertWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="日志预警"
+        Width="600" SizeToContent="Height" MaxHeight="780"
+        WindowStyle="None" AllowsTransparency="True" Background="Transparent"
+        ShowInTaskbar="False" ShowActivated="False" ResizeMode="NoResize"
+        WindowStartupLocation="Manual" Topmost="True"
+        FontFamily="{StaticResource BodyFont}" Foreground="{StaticResource TextBrush}"
+        MouseEnter="OnMouseEnter" MouseLeave="OnMouseLeave">
+
+  <Window.Resources>
+    <Style x:Key="MetaLabel" TargetType="TextBlock">
+      <Setter Property="FontSize" Value="9" />
+      <Setter Property="Foreground" Value="{StaticResource TextDimBrush}" />
+      <Setter Property="Margin" Value="0,0,0,2" />
+    </Style>
+    <Style x:Key="MetaValue" TargetType="TextBlock">
+      <Setter Property="FontSize" Value="10.5" />
+      <Setter Property="Foreground" Value="{StaticResource TextSubBrush}" />
+      <Setter Property="FontFamily" Value="{StaticResource MonoFont}" />
+      <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+    </Style>
+    <Style x:Key="LinkButton" TargetType="Button">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="Padding" Value="0" />
+      <Setter Property="Foreground" Value="{StaticResource PrimaryHiBrush}" />
+      <Setter Property="Cursor" Value="Hand" />
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="Button">
+            <TextBlock Text="{TemplateBinding Content}" Foreground="{TemplateBinding Foreground}"
+                       FontSize="9" TextDecorations="Underline" />
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+  </Window.Resources>
+
+  <Border x:Name="Shell" Background="#FF0F141A" BorderBrush="{StaticResource BorderStrongBrush}"
+          BorderThickness="1" CornerRadius="10"
+          PreviewMouseRightButtonDown="OnShellMouseRightButtonDown"
+          PreviewMouseRightButtonUp="OnShellMouseRightButtonUp"
+          PreviewMouseMove="OnShellMouseMove"
+          LostMouseCapture="OnShellLostMouseCapture">
+    <Grid>
+      <!-- HTML 原型里的左侧危险色强调条 -->
+      <Border x:Name="AccentBorder" Width="3" HorizontalAlignment="Left"
+              Background="{StaticResource DangerBrush}" CornerRadius="10,0,0,10" />
+
+      <Grid Margin="3,0,0,0">
+        <Grid.RowDefinitions>
+          <RowDefinition Height="Auto" />
+          <RowDefinition Height="Auto" />
+          <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <!-- ================= 头部 ================= -->
+        <Border Grid.Row="0" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,0,1"
+                MouseLeftButtonDown="OnHeaderMouseDown">
+          <Grid Margin="15,12,12,11">
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="Auto" />
+              <ColumnDefinition Width="*" />
+              <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+
+            <Border Width="35" Height="35" CornerRadius="9" Margin="0,2,11,0"
+                    Background="{StaticResource DangerDimBrush}" BorderBrush="#59FF4D4D" BorderThickness="1"
+                    VerticalAlignment="Top">
+              <Viewbox Width="18" Height="18">
+                <Canvas Width="24" Height="24">
+                  <Path Data="M12 3 L22.5 21 H1.5 Z" Stroke="{StaticResource DangerBrush}"
+                        StrokeThickness="1.8" StrokeLineJoin="Round" Fill="Transparent" />
+                  <Path Data="M12 9 V13.5" Stroke="{StaticResource DangerBrush}"
+                        StrokeThickness="1.8" StrokeStartLineCap="Round" />
+                  <Path Data="M12 17 H12.01" Stroke="{StaticResource DangerBrush}"
+                        StrokeThickness="1.8" StrokeStartLineCap="Round" />
+                </Canvas>
+              </Viewbox>
+            </Border>
+
+            <StackPanel Grid.Column="1">
+              <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                <Ellipse x:Name="PulseDot" Width="6" Height="6" Fill="{StaticResource DangerBrush}"
+                         Margin="0,0,6,0" VerticalAlignment="Center">
+                  <Ellipse.Triggers>
+                    <EventTrigger RoutedEvent="Loaded">
+                      <BeginStoryboard>
+                        <Storyboard RepeatBehavior="Forever" AutoReverse="True">
+                          <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                                           From="0.35" To="1" Duration="0:0:1.2" />
+                        </Storyboard>
+                      </BeginStoryboard>
+                    </EventTrigger>
+                  </Ellipse.Triggers>
+                </Ellipse>
+                <TextBlock Text="INTEL ALERT" FontFamily="{StaticResource MonoFont}" FontSize="8.5"
+                           Foreground="#FFFF9B9B" VerticalAlignment="Center" />
+                <Border x:Name="AccountBadge" Background="{StaticResource PrimaryDimBrush}"
+                        BorderBrush="#4DF0A02A" BorderThickness="1" CornerRadius="999"
+                        Padding="5,1" Margin="6,0,0,0" VerticalAlignment="Center"
+                        Visibility="Collapsed">
+                  <TextBlock x:Name="AccountBadgeText" FontFamily="{StaticResource MonoFont}"
+                             FontSize="8" Foreground="{StaticResource PrimaryHiBrush}" />
+                </Border>
+                <Border x:Name="TopmostChip" BorderBrush="{StaticResource BorderStrongBrush}"
+                        BorderThickness="1" CornerRadius="999" Padding="5,1" Margin="6,0,0,0"
+                        VerticalAlignment="Center">
+                  <TextBlock x:Name="TopmostChipText" Text="置顶" FontSize="8"
+                             Foreground="{StaticResource TextSubBrush}" />
+                </Border>
+              </StackPanel>
+
+              <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
+                <TextBlock x:Name="TargetName" FontFamily="{StaticResource MonoFont}" FontSize="26"
+                           FontWeight="SemiBold" VerticalAlignment="Center" />
+                <Border x:Name="JumpsBadge" Background="#33FF4D4D"
+                        BorderBrush="#99FF5D5D" BorderThickness="1.2" CornerRadius="999"
+                        Padding="10,2" Margin="10,0,0,0" VerticalAlignment="Center">
+                  <TextBlock x:Name="JumpsText" FontFamily="{StaticResource MonoFont}" FontSize="13"
+                             FontWeight="SemiBold" Foreground="#FFFFD2D2" />
+                </Border>
+              </StackPanel>
+
+              <WrapPanel Margin="0,4,0,0">
+                <TextBlock x:Name="CharacterText" FontSize="9.5" Foreground="{StaticResource TextDimBrush}" />
+                <TextBlock x:Name="CharacterSeparator" Text=" · " FontSize="9.5"
+                           Foreground="{StaticResource TextDimBrush}" />
+                <TextBlock x:Name="ChannelText" FontSize="9.5" Foreground="{StaticResource TextDimBrush}"
+                           TextTrimming="CharacterEllipsis" MaxWidth="190" />
+                <TextBlock x:Name="ChannelSeparator" Text=" · " FontSize="9.5"
+                           Foreground="{StaticResource TextDimBrush}" />
+                <TextBlock x:Name="TimeText" FontSize="9.5" Foreground="{StaticResource TextDimBrush}"
+                           FontFamily="{StaticResource MonoFont}" />
+              </WrapPanel>
+            </StackPanel>
+
+            <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Top">
+              <Button x:Name="PinButton" Style="{StaticResource BtnGhost}" Width="28" Height="28"
+                      Padding="0" Click="OnTogglePinClick" ToolTip="取消置顶">
+                <Path x:Name="PinIcon" Width="15" Height="15" Stretch="Uniform"
+                      Data="M12 2 L15 5 L15 10 L18 13 L18 15 L13 15 L13 22 L11 22 L11 15 L6 15 L6 13 L9 10 L9 5 Z"
+                      Stroke="{StaticResource PrimaryBrush}" StrokeThickness="1.5"
+                      StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round"
+                      Fill="Transparent" />
+              </Button>
+              <Button Style="{StaticResource BtnGhost}" Width="28" Height="28" Padding="0" Margin="2,0,0,0"
+                      Click="OnCloseClick" ToolTip="关闭（不清除事件记录）">
+                <Path Width="13" Height="13" Stretch="Uniform" Data="M18 6 6 18 M6 6 12 12"
+                      Stroke="{StaticResource TextSubBrush}" StrokeThickness="1.9"
+                      StrokeStartLineCap="Round" StrokeEndLineCap="Round" />
+              </Button>
+            </StackPanel>
+          </Grid>
+        </Border>
+
+        <!-- ================= 主体 ================= -->
+        <StackPanel Grid.Row="1" Margin="15,11,15,13">
+          <Border x:Name="MessageBox" Background="#08FFFFFF" BorderBrush="#1FFFFFFF"
+                  BorderThickness="1" CornerRadius="6" Padding="8,6" Margin="0,0,0,9"
+                  ClipToBounds="True">
+            <Grid>
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+              </Grid.ColumnDefinitions>
+
+              <TextBlock Text="预警内容" FontSize="9" Foreground="{StaticResource TextDimBrush}"
+                         Margin="0,1,8,0" VerticalAlignment="Top" />
+
+              <TextBlock x:Name="MessageText" Grid.Column="1" FontSize="10.5"
+                         FontFamily="{StaticResource MonoFont}" Foreground="{StaticResource TextSubBrush}"
+                         TextWrapping="Wrap" MaxHeight="52" />
+            </Grid>
+          </Border>
+
+          <Grid>
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="*" />
+              <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+
+            <TextBlock x:Name="VizTitle" Text="最短星门路径" FontSize="9.5"
+                       Foreground="{StaticResource TextDimBrush}" VerticalAlignment="Center" />
+
+            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+              <Button x:Name="AlternativeButton" Style="{StaticResource LinkButton}"
+                      Content="备选路线" Visibility="Collapsed" Click="OnToggleAlternativeClick" />
+              <TextBlock x:Name="VizHint" Text="每段 = 1 跳" FontSize="9"
+                         Foreground="{StaticResource TextDimBrush}" Margin="10,0,0,0"
+                         VerticalAlignment="Center" />
+            </StackPanel>
+          </Grid>
+
+          <Border Background="#FF0A0F16" BorderBrush="#1FFFFFFF" BorderThickness="1"
+                  CornerRadius="8" ClipToBounds="True" Margin="0,5,0,0">
+            <ScrollViewer x:Name="GraphScroll" HorizontalScrollBarVisibility="Auto"
+                          VerticalScrollBarVisibility="Disabled" PanningMode="HorizontalOnly"
+                          Background="Transparent" PreviewMouseWheel="OnGraphMouseWheel">
+              <Canvas x:Name="GraphCanvas" Height="170" ClipToBounds="True" />
+            </ScrollViewer>
+          </Border>
+
+          <Grid Margin="0,10,0,0">
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="1*" />
+              <ColumnDefinition Width="1.25*" />
+              <ColumnDefinition Width="1*" />
+              <ColumnDefinition Width="1*" />
+            </Grid.ColumnDefinitions>
+
+            <StackPanel x:Name="MetaRule" Grid.Column="0" Margin="0,0,9,0">
+              <TextBlock Text="命中规则" Style="{StaticResource MetaLabel}" />
+              <TextBlock x:Name="RuleText" Style="{StaticResource MetaValue}" />
+            </StackPanel>
+
+            <StackPanel x:Name="MetaSound" Grid.Column="1" Margin="0,0,9,0">
+              <TextBlock Text="报警声音" Style="{StaticResource MetaLabel}" />
+              <TextBlock x:Name="SoundText" Style="{StaticResource MetaValue}" />
+            </StackPanel>
+
+            <StackPanel x:Name="MetaRegion" Grid.Column="2" Margin="0,0,9,0">
+              <TextBlock Text="星域" Style="{StaticResource MetaLabel}" />
+              <TextBlock x:Name="RegionText" Style="{StaticResource MetaValue}" />
+            </StackPanel>
+
+            <StackPanel x:Name="MetaSecurity" Grid.Column="3">
+              <TextBlock Text="安全等级" Style="{StaticResource MetaLabel}" />
+              <TextBlock x:Name="SecurityText" Style="{StaticResource MetaValue}" Foreground="#FFFF9090" />
+            </StackPanel>
+          </Grid>
+
+          <ListBox x:Name="BatchList" MaxHeight="136" Margin="0,10,0,0"
+                   Background="Transparent" BorderThickness="0" Visibility="Collapsed"
+                   ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                   SelectionChanged="OnBatchSelectionChanged">
+            <ListBox.ItemContainerStyle>
+              <Style TargetType="ListBoxItem">
+                <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                <Setter Property="Padding" Value="0" />
+                <Setter Property="Margin" Value="0,0,0,2" />
+                <Setter Property="Template">
+                  <Setter.Value>
+                    <ControlTemplate TargetType="ListBoxItem">
+                      <Border x:Name="Root" Background="Transparent" BorderBrush="Transparent"
+                              BorderThickness="1" CornerRadius="5" Padding="7,5">
+                        <ContentPresenter />
+                      </Border>
+                      <ControlTemplate.Triggers>
+                        <Trigger Property="IsSelected" Value="True">
+                          <Setter TargetName="Root" Property="Background" Value="{StaticResource PrimaryDimBrush}" />
+                          <Setter TargetName="Root" Property="BorderBrush" Value="#4DF0A02A" />
+                        </Trigger>
+                        <Trigger Property="IsMouseOver" Value="True">
+                          <Setter TargetName="Root" Property="Background" Value="#0FFFFFFF" />
+                        </Trigger>
+                      </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                  </Setter.Value>
+                </Setter>
+              </Style>
+            </ListBox.ItemContainerStyle>
+            <ListBox.ItemTemplate>
+              <DataTemplate>
+                <Grid>
+                  <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                  </Grid.ColumnDefinitions>
+
+                  <Border Width="3" Height="22" Background="{StaticResource DangerBrush}"
+                          CornerRadius="2" Margin="0,0,8,0" VerticalAlignment="Center" />
+
+                  <StackPanel Grid.Column="1">
+                    <TextBlock Text="{Binding CharacterName}" FontSize="10"
+                               Foreground="{StaticResource TextSubBrush}" TextTrimming="CharacterEllipsis" />
+                    <TextBlock FontSize="9" Foreground="{StaticResource TextDimBrush}" Margin="0,2,0,0"
+                               FontFamily="{StaticResource MonoFont}" TextTrimming="CharacterEllipsis">
+                      <Run Text="{Binding Target.Name}" />
+                      <Run Text="  ·  " />
+                      <Run Text="{Binding Time, StringFormat={}{0:HH:mm:ss}}" />
+                    </TextBlock>
+                  </StackPanel>
+
+                  <Border Grid.Column="2" Background="{StaticResource DangerDimBrush}" BorderBrush="#4DFF5D5D"
+                          BorderThickness="1" CornerRadius="999" Padding="6,1" VerticalAlignment="Center">
+                    <TextBlock Text="{Binding Jumps, StringFormat={}{0} 跳}" FontFamily="{StaticResource MonoFont}"
+                               FontSize="9" Foreground="#FFFF9B9B" />
+                  </Border>
+                </Grid>
+              </DataTemplate>
+            </ListBox.ItemTemplate>
+          </ListBox>
+        </StackPanel>
+
+        <!-- ================= 底部 ================= -->
+        <Border Grid.Row="2" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,1,0,0"
+                Background="#03FFFFFF" Padding="15,9">
+          <Grid>
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="*" />
+              <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+
+            <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="0,0,12,0">
+              <TextBlock x:Name="CountdownText" Text="10 秒后自动关闭" FontSize="9"
+                         Foreground="{StaticResource TextDimBrush}" />
+              <ProgressBar x:Name="CountdownBar" Height="3" Margin="0,5,0,0" Minimum="0" Maximum="100"
+                           Value="100" BorderThickness="0" Background="#FF232B36"
+                           Foreground="{StaticResource DangerBrush}" />
+            </StackPanel>
+
+            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+              <Button Style="{StaticResource BtnMini}" Height="27" Content="复制星系"
+                      Click="OnCopySystemClick" />
+              <Button Style="{StaticResource BtnMini}" Height="27" Content="切到角色" Margin="6,0,0,0"
+                      Click="OnFocusCharacterClick" />
+            </StackPanel>
+          </Grid>
+        </Border>
+      </Grid>
+    </Grid>
+  </Border>
+</Window>

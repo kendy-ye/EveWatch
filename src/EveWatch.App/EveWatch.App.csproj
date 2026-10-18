@@ -1,0 +1,38 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows10.0.26100.0</TargetFramework>
+    <SupportedOSPlatformVersion>10.0.19041.0</SupportedOSPlatformVersion>
+    <TargetPlatformMinVersion>10.0.19041.0</TargetPlatformMinVersion>
+    <UseWPF>true</UseWPF>
+    <!-- 托盘图标用 WinForms 的 NotifyIcon；两个框架都在 Microsoft.WindowsDesktop.App 里，不额外增大体积 -->
+    <UseWindowsForms>true</UseWindowsForms>
+    <RootNamespace>EveWatch.App</RootNamespace>
+    <AssemblyName>EveWatch</AssemblyName>
+    <!-- 可执行文件图标：任务栏、Alt+Tab、资源管理器都用它 -->
+    <ApplicationIcon>Assets\evewatch.ico</ApplicationIcon>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <!-- WFAC010：WinForms 分析器要求把高 DPI 设置从清单移到 ApplicationHighDpiMode 属性。
+         本工程是 WPF 为主，WPF 不读该属性，DPI 感知只能由清单声明，故按需忽略。 -->
+    <NoWarn>$(NoWarn);WFAC010</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- 关掉 SDK 为 WinForms 隐式引入的两个命名空间。它们与 WPF 的 Application / DragEventArgs /
+         MouseEventArgs / Brush / Color 等同名，保留会造成大面积类型歧义。
+         本工程用到 WinForms 的地方只有托盘 NotifyIcon，已写全名。 -->
+    <Using Remove="System.Windows.Forms" />
+    <Using Remove="System.Drawing" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\EveWatch.Core\EveWatch.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- 同一份 ico 既作为 exe 图标，也作为资源供主窗口与托盘读取 -->
+    <Resource Include="Assets\evewatch.ico" />
+  </ItemGroup>
+
+</Project>

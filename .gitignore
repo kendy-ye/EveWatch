@@ -1,0 +1,19 @@
+# 构建产物
+bin/
+obj/
+dist/
+publish/
+*.user
+*.suo
+.vs/
+
+# 运行时生成
+evewatch.json
+evewatch.ui.json
+crash.log
+shots/
+*.log
+
+# 系统
+Thumbs.db
+.DS_Store

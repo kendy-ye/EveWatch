@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>EveWatch · 日志预警弹窗 UI 方案</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="app-header reveal">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M4.9 19.1C1 15.2 1 8.8 4.9 4.9"/>
+          <path d="M7.8 16.2a6 6 0 0 1 0-8.4"/>
+          <path d="M16.2 7.8a6 6 0 0 1 0 8.4"/>
+          <path d="M19.1 4.9C23 8.8 23 15.2 19.1 19.1"/>
+          <circle cx="12" cy="12" r="2"/>
+        </svg>
+      </span>
+      <div>
+        <div class="brand-title">EveWatch <span>UI 方案</span></div>
+        <div class="brand-sub">日志预警关联图 · 置顶弹窗</div>
+      </div>
+    </div>
+    <div class="header-meta">
+      <span class="status-chip">v0.1 · 待确认</span>
+      <span class="header-note">右侧设置实时作用于预览</span>
+    </div>
+  </header>
+
+  <main class="workspace">
+    <section class="preview-panel reveal">
+      <div class="panel-head">
+        <div>
+          <h1>弹窗预览</h1>
+          <p>模拟日志预警命中后弹出的置顶窗口，可拖动、可切换视图</p>
+        </div>
+        <div class="preview-actions">
+          <div class="segmented" data-segment="scenario" aria-label="报警场景">
+            <button type="button" data-value="same">同星系</button>
+            <button type="button" data-value="jump3" class="active">3 跳</button>
+            <button type="button" data-value="jump5">5 跳</button>
+            <button type="button" data-value="batch">多账号</button>
+          </div>
+          <button type="button" class="btn btn-primary" id="simulateBtn">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M10.268 21a2 2 0 0 0 3.464 0"/>
+              <path d="M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326"/>
+            </svg>
+            模拟报警
+          </button>
+        </div>
+      </div>
+
+      <div class="stage" id="stage">
+        <div class="stage-bg" aria-hidden="true">
+          <div class="stage-grid"></div>
+          <div class="fake-window fw-one">
+            <div class="fake-title"><i></i><span>EVE Client · String B</span></div>
+            <div class="fake-lines"><i></i><i></i><i></i><i></i></div>
+          </div>
+          <div class="fake-window fw-two">
+            <div class="fake-title"><i></i><span>EVE Client · TieTouWa A</span></div>
+            <div class="fake-lines"><i></i><i></i><i></i></div>
+          </div>
+          <span class="stage-tag">TOPMOST OVERLAY</span>
+        </div>
+
+        <article class="alert-window" id="alertWindow" data-position="top-right" data-size="standard" data-view="route" data-topmost="true">
+          <header class="alert-head" id="alertHead">
+            <span class="alert-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/>
+                <path d="M12 9v4"/>
+                <path d="M12 17h.01"/>
+              </svg>
+            </span>
+
+            <div class="alert-head-text">
+              <div class="alert-kicker">
+                <span class="pulse-dot"></span>
+                <span id="alertKickerText">INTEL ALERT</span>
+                <span class="topmost-chip" id="topmostChip">置顶</span>
+              </div>
+              <div class="alert-title-row">
+                <h2 id="alertSystem">Y-FZ5N</h2>
+                <span class="jump-badge" id="jumpBadge">3 跳</span>
+              </div>
+              <div class="alert-sub">
+                <span data-part="character" id="alertCharacter">TieTouWa A</span>
+                <span class="sub-sep" data-part="character">·</span>
+                <span data-part="channel" id="alertChannel">fareast.imperium</span>
+                <span class="sub-sep" data-part="channel">·</span>
+                <span id="alertTime">22:14:03</span>
+              </div>
+            </div>
+
+            <div class="alert-actions">
+              <button type="button" class="icon-btn is-active" id="pinBtn" title="取消置顶">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M12 17v5"/>
+                  <path d="M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z"/>
+                </svg>
+              </button>
+              <button type="button" class="icon-btn" id="muteBtn" title="静音">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M11 4.7a.7.7 0 0 0-1.2-.5L6.4 7.6A1.4 1.4 0 0 1 5.4 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.4a1.4 1.4 0 0 1 1 .4l3.4 3.4a.7.7 0 0 0 1.2-.5z"/>
+                  <path d="M16 9a5 5 0 0 1 0 6"/>
+                  <path d="M19.4 18.4a9 9 0 0 0 0-12.8"/>
+                </svg>
+              </button>
+              <button type="button" class="icon-btn danger" id="closeBtn" title="关闭">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true">
+                  <path d="M18 6 6 18"/>
+                  <path d="m6 6 12 12"/>
+                </svg>
+              </button>
+            </div>
+          </header>
+
+          <div class="alert-body">
+            <div class="viz-head">
+              <span id="vizTitle">最短星门路径</span>
+              <div class="viz-tools">
+                <button type="button" class="link-btn" id="altRouteBtn" hidden>备选路线</button>
+                <span class="viz-hint" id="vizHint">每段 = 1 跳</span>
+              </div>
+            </div>
+            <div class="viz" id="routeViz"></div>
+            <div class="viz alt-viz" id="altRouteViz" hidden></div>
+            <div class="viz viz-neighborhood" id="neighborhoodViz" hidden></div>
+
+            <div class="meta-row">
+              <div class="meta-item">
+                <span>命中规则</span>
+                <strong id="ruleText">2-5 跳</strong>
+              </div>
+              <div class="meta-item" data-content="sound">
+                <span>报警声音</span>
+                <strong id="soundText">低沉蜂鸣 · 80%</strong>
+              </div>
+              <div class="meta-item" data-content="region">
+                <span>星域</span>
+                <strong id="regionText">Immensea</strong>
+              </div>
+              <div class="meta-item" data-content="security">
+                <span>安全等级</span>
+                <strong id="securityText" class="danger-text">-0.41</strong>
+              </div>
+            </div>
+
+            <div class="batch-list" id="batchList" hidden></div>
+            <div class="batch-note" id="batchNote" hidden></div>
+          </div>
+
+          <footer class="alert-foot">
+            <div class="countdown" id="countdown">
+              <span id="countdownText">10 秒后自动关闭</span>
+              <div class="progress"><i id="progressBar"></i></div>
+            </div>
+            <div class="foot-actions">
+              <button type="button" class="btn btn-mini" id="copyBtn">复制星系</button>
+              <button type="button" class="btn btn-mini primary" id="focusBtn">切到角色</button>
+            </div>
+          </footer>
+        </article>
+
+        <div class="stage-empty" id="stageEmpty" hidden>
+          <span class="stage-empty-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+              <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+              <path d="m2 2 20 20"/>
+            </svg>
+          </span>
+          <strong id="stageEmptyTitle">弹窗已关闭</strong>
+          <span id="stageEmptyDetail">点击「模拟报警」重新显示</span>
+        </div>
+
+        <div class="stage-hint">拖动标题栏可移动窗口</div>
+      </div>
+
+      <div class="legend">
+        <span><i class="legend-dot current"></i>当前位置</span>
+        <span><i class="legend-dot alert"></i>警报位置</span>
+        <span><i class="legend-line"></i>最短星门路径</span>
+        <span><i class="legend-line alt"></i>备选路线（可选）</span>
+        <span><i class="legend-dot muted"></i>邻近星系</span>
+      </div>
+    </section>
+
+    <aside class="settings-panel reveal">
+      <div class="panel-head compact">
+        <div>
+          <h2>弹窗设置</h2>
+          <p>改动即时作用于左侧预览</p>
+        </div>
+        <button type="button" class="icon-btn" id="resetBtn" title="重置设置">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M3 12a9 9 0 1 0 3-6.7L3 8"/>
+            <path d="M3 3v5h5"/>
+          </svg>
+        </button>
+      </div>
+
+      <div class="setting-group">
+        <div class="setting-label">
+          <span>启用弹窗</span>
+          <small>命中规则后显示置顶窗口</small>
+        </div>
+        <button type="button" class="switch" role="switch" aria-checked="true" data-toggle="enabled"><i></i></button>
+      </div>
+
+      <div class="setting-group">
+        <div class="setting-label">
+          <span>显示模式</span>
+          <small>路线优先或完整邻域</small>
+        </div>
+        <div class="segmented small" data-segment="view" aria-label="显示模式">
+          <button type="button" data-value="route" class="active">路线</button>
+          <button type="button" data-value="neighborhood">邻域</button>
+        </div>
+      </div>
+
+      <div class="setting-group">
+        <div class="setting-label">
+          <span>窗口尺寸</span>
+          <small>随显示器分辨率选择</small>
+        </div>
+        <div class="segmented small" data-segment="size" aria-label="窗口尺寸">
+          <button type="button" data-value="compact">紧凑</button>
+          <button type="button" data-value="standard" class="active">标准</button>
+          <button type="button" data-value="large">大</button>
+        </div>
+      </div>
+
+      <div class="setting-group">
+        <div class="setting-label">
+          <span>不透明度</span>
+          <small>可读性下限 65%</small>
+        </div>
+        <div class="range-row">
+          <input type="range" id="opacityRange" min="65" max="100" value="100" aria-label="不透明度">
+          <output id="opacityValue">100%</output>
+        </div>
+      </div>
+
+      <div class="setting-group">
+        <div class="setting-label">
+          <span>自动关闭</span>
+          <small>悬停暂停倒计时</small>
+        </div>
+        <select id="autoCloseSelect" aria-label="自动关闭">
+          <option value="5">5 秒</option>
+          <option value="10" selected>10 秒</option>
+          <option value="30">30 秒</option>
+          <option value="0">不自动关闭</option>
+        </select>
+      </div>
+
+      <div class="setting-group">
+        <div class="setting-label">
+          <span>弹出位置</span>
+          <small>拖动后自动切换为自定义并保存</small>
+        </div>
+        <select id="positionSelect" aria-label="弹出位置">
+          <option value="top-right" selected>右上角</option>
+          <option value="top-left">左上角</option>
+          <option value="bottom-right">右下角</option>
+          <option value="bottom-left">左下角</option>
+          <option value="center">屏幕居中</option>
+          <option value="wall-side">ROI 并排窗旁</option>
+          <option value="custom">自定义（拖拽）</option>
+        </select>
+      </div>
+
+      <div class="setting-group">
+        <div class="setting-label">
+          <span>目标显示器</span>
+          <small>锚点按该屏幕工作区计算</small>
+        </div>
+        <select id="monitorSelect" aria-label="目标显示器">
+          <option value="primary" selected>主屏 · 2560×1440</option>
+          <option value="secondary">扩展屏 · 1920×1080</option>
+        </select>
+      </div>
+
+      <div class="setting-group">
+        <div class="setting-label">
+          <span>置顶显示</span>
+          <small>关闭后可能被游戏窗口遮挡</small>
+        </div>
+        <button type="button" class="switch" role="switch" aria-checked="true" data-toggle="topmost"><i></i></button>
+      </div>
+
+      <div class="setting-group stack">
+        <div class="setting-label">
+          <span>显示内容</span>
+          <small>控制弹窗中的信息密度</small>
+        </div>
+        <div class="check-grid">
+          <label class="check"><input type="checkbox" data-content-toggle="region" checked><span>星域</span></label>
+          <label class="check"><input type="checkbox" data-content-toggle="security" checked><span>安全等级</span></label>
+          <label class="check"><input type="checkbox" data-content-toggle="channel" checked><span>频道</span></label>
+          <label class="check"><input type="checkbox" data-content-toggle="character" checked><span>角色</span></label>
+          <label class="check"><input type="checkbox" data-content-toggle="sound" checked><span>声音</span></label>
+        </div>
+      </div>
+
+      <div class="setting-group stack">
+        <div class="setting-label">
+          <span>多账号合并</span>
+          <small>同时触发时只播一次声音</small>
+        </div>
+        <div class="static-chips">
+          <span>1.2 秒合并窗口</span>
+          <span>最紧急规则声音</span>
+          <span>同星系 30 秒冷却</span>
+        </div>
+      </div>
+
+      <div class="settings-note">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="10"/>
+          <path d="M12 16v-4"/>
+          <path d="M12 8h.01"/>
+        </svg>
+        <span>弹窗不抢游戏焦点；多账号触发合并为一批，点击列表可切换主图。</span>
+      </div>
+    </aside>
+  </main>
+
+  <section class="listeners-panel reveal">
+    <div class="rules-head">
+      <div>
+        <h2>监听账号与频道</h2>
+        <p>同一账号可监听多个频道，每个账号按自己的当前位置判断</p>
+      </div>
+      <div class="preview-actions">
+        <button type="button" class="btn" id="probeToggleBtn">频道探测</button>
+        <button type="button" class="btn btn-primary" id="addListenerBtn">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true">
+            <path d="M12 5v14"/>
+            <path d="M5 12h14"/>
+          </svg>
+          添加监听
+        </button>
+      </div>
+    </div>
+
+    <div class="listener-table-head" aria-hidden="true">
+      <span>角色</span>
+      <span>频道</span>
+      <span>类型</span>
+      <span>当前星系</span>
+      <span>状态</span>
+      <span></span>
+    </div>
+
+    <div class="listener-table" id="listenerTable"></div>
+
+    <div class="listener-probe" id="listenerProbe">
+      <div class="probe-head">
+        <span>频道探测</span>
+        <select id="probeCharacter" aria-label="探测角色"></select>
+        <button type="button" class="btn btn-mini" id="rescanChannelsBtn">重新扫描</button>
+      </div>
+
+      <div class="probe-channels" id="probeChannels"></div>
+
+      <div class="probe-manual">
+        <input type="text" id="manualChannel" placeholder="手动输入频道名或 Channel ID">
+        <button type="button" class="btn btn-mini primary" id="addManualChannelBtn">添加</button>
+      </div>
+
+      <div class="probe-note">列表来自最近 30 天聊天日志，不是客户端实时频道列表；未找到的频道会进入「等待日志」。</div>
+    </div>
+
+    <div class="rules-foot">
+      <span>舰队频道的 Channel ID 每次组建舰队都会变化，程序按最新 fleet_* 日志跟随。</span>
+      <span>本地频道不参与预警。</span>
+    </div>
+  </section>
+
+  <section class="rules-panel reveal">
+    <div class="rules-head">
+      <div>
+        <h2>预警规则</h2>
+        <p>按跳数区间匹配，列表顺序即优先级；可添加任意多条</p>
+      </div>
+      <button type="button" class="btn btn-primary" id="addRuleBtn">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true">
+          <path d="M12 5v14"/>
+          <path d="M5 12h14"/>
+        </svg>
+        添加规则
+      </button>
+    </div>
+
+    <div class="rule-table-head" aria-hidden="true">
+      <span>顺序</span>
+      <span>跳数区间</span>
+      <span>报警声音</span>
+      <span>音量</span>
+      <span>启用</span>
+      <span></span>
+    </div>
+
+    <div class="rule-table" id="ruleTable"></div>
+
+    <div class="rules-foot">
+      <span>区间为闭区间：1-2 表示 1 跳与 2 跳都触发。</span>
+      <span>重叠区间按从上到下的顺序先命中先生效。</span>
+      <span>规则修改会保存；弹窗预览使用示例场景。</span>
+    </div>
+  </section>
+
+  <section class="notes reveal">
+    <div class="notes-head">
+      <div>
+        <h2>交互与行为</h2>
+        <p>以下行为与日志预警规则保持一致，供确认</p>
+      </div>
+      <span class="notes-tag">非最终实现</span>
+    </div>
+
+    <div class="note-grid">
+      <article class="note-card">
+        <span class="note-index">01</span>
+        <h3>触发与内容</h3>
+        <p>预警频道消息命中规则后弹出，显示当前星系、警报星系、最短星门路径与总跳数。</p>
+      </article>
+      <article class="note-card">
+        <span class="note-index">02</span>
+        <h3>置顶与焦点</h3>
+        <p>窗口置顶、无边框、不进入任务栏，不抢 EVE 客户端焦点；拖动标题栏后位置持久化。</p>
+      </article>
+      <article class="note-card">
+        <span class="note-index">03</span>
+        <h3>多账号合并</h3>
+        <p>1.2 秒内到达的报警合并为一批，只播最紧急规则的声音；同一星系被多个频道报告时合并显示。</p>
+      </article>
+      <article class="note-card">
+        <span class="note-index">04</span>
+        <h3>关闭与暂停</h3>
+        <p>默认 10 秒自动关闭，鼠标悬停暂停倒计时；关闭弹窗不会清除事件栏记录。</p>
+      </article>
+    </div>
+
+    <div class="spec-table">
+      <div class="spec-row"><span>窗口层级</span><strong>Topmost，无边框，不进入任务栏</strong></div>
+      <div class="spec-row"><span>视图切换</span><strong>路线视图显示最短路径；邻域视图显示 5 跳范围与高亮路径</strong></div>
+      <div class="spec-row"><span>命中反馈</span><strong>警报节点红色脉冲，当前位置琥珀色，途经节点中性色</strong></div>
+      <div class="spec-row"><span>备选路线</span><strong>同一星系多条路径只触发一次；最短路径实线，备选路线可叠加为虚线</strong></div>
+      <div class="spec-row"><span>数据来源</span><strong>本地星系图 + 本地频道日志，运行时不请求网络</strong></div>
+    </div>
+  </section>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script src="mock.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

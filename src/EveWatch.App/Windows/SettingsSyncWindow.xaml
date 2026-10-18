@@ -1,0 +1,281 @@
+<Window x:Class="EveWatch.App.Windows.SettingsSyncWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="游戏布局同步"
+        Width="944" SizeToContent="Height"
+        WindowStyle="None" AllowsTransparency="True" Background="Transparent"
+        ResizeMode="NoResize" ShowInTaskbar="False"
+        WindowStartupLocation="Manual"
+        Foreground="{StaticResource TextBrush}" FontFamily="{StaticResource BodyFont}">
+
+  <Border Background="{StaticResource SurfaceBrush}" BorderBrush="{StaticResource BorderStrongBrush}"
+          BorderThickness="1" CornerRadius="10">
+    <Grid>
+      <Grid.RowDefinitions>
+        <RowDefinition Height="34" />
+        <RowDefinition Height="Auto" />
+        <RowDefinition Height="Auto" />
+        <RowDefinition Height="Auto" />
+        <RowDefinition Height="Auto" />
+        <RowDefinition Height="Auto" />
+      </Grid.RowDefinitions>
+
+      <!-- ================= 1. 标题栏 ================= -->
+      <Border Grid.Row="0" Background="#FF161D24" BorderBrush="{StaticResource BorderBrush}"
+              BorderThickness="0,0,0,1" CornerRadius="10,10,0,0"
+              MouseLeftButtonDown="OnTitleBarMouseDown">
+        <Grid Margin="12,0,8,0">
+          <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+            <Path Width="13" Height="13" Stretch="Uniform" Fill="{StaticResource TextSubBrush}"
+                  Data="M0,0 H14 V5 H0 Z M0,7 H8 V14 H0 Z M10,7 H14 V14 H10 Z" />
+            <TextBlock Text="游戏布局同步" FontFamily="{StaticResource DisplayFont}" FontSize="11"
+                       Margin="9,0,0,0" VerticalAlignment="Center" Foreground="{StaticResource TextSubBrush}" />
+            <Border x:Name="GuardPill" CornerRadius="10" Padding="9,1" Margin="10,0,0,0" BorderThickness="1"
+                    Cursor="Hand" ToolTip="点击重新检测 EVE 客户端进程"
+                    MouseLeftButtonDown="OnGuardClick">
+              <StackPanel Orientation="Horizontal">
+                <Ellipse x:Name="GuardDot" Width="6" Height="6" VerticalAlignment="Center" />
+                <TextBlock x:Name="GuardText" Text="检测中…" FontSize="10.5" Margin="6,0,0,0" />
+              </StackPanel>
+            </Border>
+          </StackPanel>
+          <Button Style="{StaticResource BtnGhost}" Width="24" Height="24" Padding="0" Content="✕"
+                  HorizontalAlignment="Right" VerticalAlignment="Center" ToolTip="关闭" Click="OnCloseClick" />
+        </Grid>
+      </Border>
+
+      <!-- ================= 2. 工具行 ================= -->
+      <Border Grid.Row="1" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,0,1">
+        <StackPanel Orientation="Horizontal" Margin="14,12" VerticalAlignment="Center">
+          <TextBlock Text="源" Style="{StaticResource DimText}" VerticalAlignment="Center" />
+          <ComboBox x:Name="SourceCombo" Width="214" Margin="7,0,0,0" SelectionChanged="OnSourceChanged">
+            <ComboBox.ItemTemplate>
+              <DataTemplate>
+                <StackPanel Orientation="Horizontal">
+                  <TextBlock Text="{Binding Name}" FontSize="11.5" VerticalAlignment="Center" />
+                  <TextBlock Text="{Binding InstallId}" Style="{StaticResource DimText}" FontSize="10"
+                             Margin="6,0,0,0" VerticalAlignment="Center" />
+                </StackPanel>
+              </DataTemplate>
+            </ComboBox.ItemTemplate>
+          </ComboBox>
+
+          <TextBlock Text="目标" Style="{StaticResource DimText}" Margin="12,0,0,0" VerticalAlignment="Center" />
+          <ComboBox x:Name="TargetCombo" Width="214" Margin="7,0,0,0" SelectionChanged="OnTargetChanged">
+            <ComboBox.ItemTemplate>
+              <DataTemplate>
+                <StackPanel Orientation="Horizontal">
+                  <TextBlock Text="{Binding Name}" FontSize="11.5" VerticalAlignment="Center" />
+                  <TextBlock Text="{Binding InstallId}" Style="{StaticResource DimText}" FontSize="10"
+                             Margin="6,0,0,0" VerticalAlignment="Center" />
+                </StackPanel>
+              </DataTemplate>
+            </ComboBox.ItemTemplate>
+          </ComboBox>
+
+          <TextBlock Text="范围" Style="{StaticResource DimText}" Margin="12,0,0,0" VerticalAlignment="Center" />
+          <Border Background="{StaticResource Surface3Brush}" BorderBrush="{StaticResource BorderStrongBrush}"
+                  BorderThickness="1" CornerRadius="6" Padding="2" Margin="7,0,0,0">
+            <StackPanel Orientation="Horizontal">
+              <Button x:Name="ScopeChar" Style="{StaticResource BtnGhost}" Height="22" Padding="12,0"
+                      FontSize="11.5" Content="角色" ToolTip="core_char：UI 布局 / 总览 / 快捷键"
+                      Click="OnScopeCharClick" />
+              <Button x:Name="ScopeUser" Style="{StaticResource BtnGhost}" Height="22" Padding="12,0"
+                      FontSize="11.5" Content="账号" ToolTip="core_user：窗口位置与尺寸 / 硬件 / 分辨率"
+                      Click="OnScopeUserClick" />
+            </StackPanel>
+          </Border>
+
+          <Button Style="{StaticResource BtnGhost}" Width="26" Height="26" Padding="0" Margin="8,0,0,0"
+                  Content="⟳" FontSize="14" ToolTip="重新扫描设置目录" Click="OnRescanClick" />
+        </StackPanel>
+      </Border>
+
+      <!-- ================= 3. 警告条 ================= -->
+      <Border x:Name="WarnBar" Grid.Row="2" Margin="14,12,14,0" Padding="11,9" CornerRadius="6"
+              Background="{StaticResource PrimaryDimBrush}" BorderBrush="#55F0A02A" BorderThickness="1">
+        <StackPanel Orientation="Horizontal">
+          <TextBlock x:Name="WarnIcon" Text="!" FontSize="13" FontWeight="Bold"
+                     Foreground="{StaticResource PrimaryHiBrush}" Margin="0,1,9,0" />
+          <TextBlock x:Name="WarnText" FontSize="11.5" TextWrapping="Wrap" Foreground="#FFD9AE6C"
+                     MaxWidth="860" />
+        </StackPanel>
+      </Border>
+
+      <!-- ================= 4. 主体：模板 / 目标 ================= -->
+      <Grid Grid.Row="3" Margin="14,12">
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="1*" />
+          <ColumnDefinition Width="1.18*" />
+        </Grid.ColumnDefinitions>
+
+        <!-- 左：模板（单选） -->
+        <StackPanel Grid.Column="0" Margin="0,0,7,0">
+          <TextBlock Text="模板（单选）" Style="{StaticResource DimText}" Margin="2,0,0,7" />
+          <Border Background="{StaticResource Surface2Brush}" BorderBrush="{StaticResource BorderBrush}"
+                  BorderThickness="1" CornerRadius="6" Height="180">
+            <ScrollViewer VerticalScrollBarVisibility="Auto">
+              <ItemsControl x:Name="TemplateHost">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate>
+                    <Border x:Name="Row" Background="Transparent" CornerRadius="4" Padding="9,7" Margin="4,1"
+                            Cursor="Hand" MouseLeftButtonDown="OnTemplateRowClick">
+                      <Grid>
+                        <Grid.ColumnDefinitions>
+                          <ColumnDefinition Width="16" />
+                          <ColumnDefinition Width="*" />
+                          <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <Ellipse Grid.Column="0" Width="14" Height="14" Stroke="{StaticResource BorderStrongBrush}"
+                                 StrokeThickness="1" VerticalAlignment="Center" />
+                        <StackPanel Grid.Column="1" Margin="9,0,0,0">
+                          <StackPanel Orientation="Horizontal">
+                            <TextBlock x:Name="NameText" Text="{Binding Name}" FontSize="12"
+                                       VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                            <TextBox x:Name="NameEdit" Width="170" Height="22" FontSize="12" Visibility="Collapsed"
+                                     VerticalAlignment="Center"
+                                     Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}" />
+                            <TextBlock Text="{Binding IdLabel}" Style="{StaticResource DimText}"
+                                       FontFamily="{StaticResource MonoFont}" FontSize="10.5"
+                                       Margin="7,0,0,0" VerticalAlignment="Center" />
+                          </StackPanel>
+                          <TextBlock Text="{Binding MetaText}" Style="{StaticResource DimText}" FontSize="10.5"
+                                     Margin="0,1,0,0" TextTrimming="CharacterEllipsis" />
+                        </StackPanel>
+                        <Border Grid.Column="2" Background="#263C78DC" BorderBrush="#663C78DC" BorderThickness="1"
+                                CornerRadius="3" Padding="6,2"
+                                Visibility="{Binding IsActive, Converter={StaticResource BoolToVisibility}}">
+                          <TextBlock Text="模板" FontSize="9.5" Foreground="#FF8AB4F0" />
+                        </Border>
+                      </Grid>
+                    </Border>
+                    <DataTemplate.Triggers>
+                      <DataTrigger Binding="{Binding IsActive}" Value="True">
+                        <Setter TargetName="Row" Property="Background" Value="{StaticResource PrimaryDimBrush}" />
+                      </DataTrigger>
+                      <DataTrigger Binding="{Binding IsNameEditable}" Value="True">
+                        <Setter TargetName="NameText" Property="Visibility" Value="Collapsed" />
+                        <Setter TargetName="NameEdit" Property="Visibility" Value="Visible" />
+                      </DataTrigger>
+                    </DataTemplate.Triggers>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </ScrollViewer>
+          </Border>
+        </StackPanel>
+
+        <!-- 右：目标（多选） -->
+        <StackPanel Grid.Column="1" Margin="7,0,0,0">
+          <Grid Margin="2,0,0,7">
+            <TextBlock Text="目标（多选）" Style="{StaticResource DimText}" VerticalAlignment="Center" />
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+              <Button Style="{StaticResource BtnMini}" Content="全选" Click="OnSelectAllTargetsClick" />
+              <Button Style="{StaticResource BtnMini}" Content="反选" Click="OnInvertTargetsClick" />
+              <Button Style="{StaticResource BtnMini}" Content="清空" Click="OnClearTargetsClick" />
+            </StackPanel>
+          </Grid>
+          <Border Background="{StaticResource Surface2Brush}" BorderBrush="{StaticResource BorderBrush}"
+                  BorderThickness="1" CornerRadius="6" Height="180">
+            <ScrollViewer VerticalScrollBarVisibility="Auto">
+              <ItemsControl x:Name="TargetHost">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate>
+                    <Border x:Name="Row" Background="Transparent" CornerRadius="4" Padding="9,7" Margin="4,1"
+                            Cursor="Hand" MouseLeftButtonDown="OnTargetRowClick">
+                      <Grid>
+                        <Grid.ColumnDefinitions>
+                          <ColumnDefinition Width="16" />
+                          <ColumnDefinition Width="*" />
+                          <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <Border x:Name="Box" Grid.Column="0" Width="15" Height="15" CornerRadius="3"
+                                Background="{StaticResource SurfaceBrush}"
+                                BorderBrush="{StaticResource BorderStrongBrush}" BorderThickness="1"
+                                VerticalAlignment="Center">
+                          <Path x:Name="Tick" Data="M2,6 L5,9 L11,3" Stroke="#FF1A1204" StrokeThickness="2"
+                                Stretch="None" Visibility="Collapsed" />
+                        </Border>
+                        <StackPanel Grid.Column="1" Margin="9,0,0,0">
+                          <StackPanel Orientation="Horizontal">
+                            <TextBlock x:Name="NameText" Text="{Binding Name}" FontSize="12"
+                                       VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                            <TextBox x:Name="NameEdit" Width="170" Height="22" FontSize="12" Visibility="Collapsed"
+                                     VerticalAlignment="Center"
+                                     Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}" />
+                            <TextBlock Text="{Binding IdLabel}" Style="{StaticResource DimText}"
+                                       FontFamily="{StaticResource MonoFont}" FontSize="10.5"
+                                       Margin="7,0,0,0" VerticalAlignment="Center" />
+                          </StackPanel>
+                          <TextBlock Text="{Binding MetaText}" Style="{StaticResource DimText}" FontSize="10.5"
+                                     Margin="0,1,0,0" TextTrimming="CharacterEllipsis" />
+                        </StackPanel>
+                        <Border x:Name="Badge" Grid.Column="2" Background="{StaticResource PrimaryDimBrush}"
+                                BorderBrush="#55F0A02A" BorderThickness="1" CornerRadius="3" Padding="6,2">
+                          <TextBlock x:Name="BadgeText" Text="{Binding StatusText}" FontSize="9.5"
+                                     Foreground="{StaticResource PrimaryHiBrush}" />
+                        </Border>
+                      </Grid>
+                    </Border>
+                    <DataTemplate.Triggers>
+                      <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                        <Setter TargetName="Row" Property="Background" Value="{StaticResource Surface4Brush}" />
+                        <Setter TargetName="Box" Property="Background" Value="{StaticResource PrimaryBrush}" />
+                        <Setter TargetName="Box" Property="BorderBrush" Value="{StaticResource PrimaryBrush}" />
+                        <Setter TargetName="Tick" Property="Visibility" Value="Visible" />
+                      </DataTrigger>
+                      <DataTrigger Binding="{Binding IsSame}" Value="True">
+                        <Setter TargetName="Badge" Property="Background" Value="{StaticResource Surface4Brush}" />
+                        <Setter TargetName="Badge" Property="BorderBrush" Value="{StaticResource BorderStrongBrush}" />
+                        <Setter TargetName="BadgeText" Property="Foreground" Value="{StaticResource TextDimBrush}" />
+                      </DataTrigger>
+                      <DataTrigger Binding="{Binding IsNameEditable}" Value="True">
+                        <Setter TargetName="NameText" Property="Visibility" Value="Collapsed" />
+                        <Setter TargetName="NameEdit" Property="Visibility" Value="Visible" />
+                      </DataTrigger>
+                    </DataTemplate.Triggers>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </ScrollViewer>
+          </Border>
+        </StackPanel>
+      </Grid>
+
+      <!-- ================= 5. 底部状态与操作 ================= -->
+      <Grid Grid.Row="4" Margin="14,0,14,12">
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="*" />
+          <ColumnDefinition Width="Auto" />
+        </Grid.ColumnDefinitions>
+        <TextBlock x:Name="StatusText" Grid.Column="0" VerticalAlignment="Center" FontSize="11.5"
+                   Foreground="{StaticResource TextSubBrush}" TextTrimming="CharacterEllipsis"
+                   Text="已选 0 个 · 将覆盖 0 个 · 其中 0 个内容已一致（跳过）" />
+        <StackPanel Grid.Column="1" Orientation="Horizontal">
+          <Button x:Name="BtnPreview" Style="{StaticResource Btn}" Content="预览 (Dry-run)" Click="OnPreviewClick" />
+          <Button x:Name="BtnRun" Style="{StaticResource BtnPrimary}" Content="执行克隆" Margin="8,0,0,0"
+                  Click="OnRunClick" />
+          <Button x:Name="BtnBackup" Style="{StaticResource Btn}" Content="备份管理" Margin="8,0,0,0"
+                  Click="OnBackupClick" />
+          <Button x:Name="BtnRestore" Style="{StaticResource Btn}" Content="还原本次" Margin="8,0,0,0"
+                  Click="OnRestoreClick" />
+        </StackPanel>
+      </Grid>
+
+      <!-- ================= 6. 日志 ================= -->
+      <Border Grid.Row="5" Margin="14,0,14,14" Height="108" Background="#FF080B0E"
+              BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="6">
+        <ScrollViewer x:Name="LogScroll" VerticalScrollBarVisibility="Auto" Padding="9,8">
+          <ItemsControl x:Name="LogHost">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate>
+                <TextBlock Text="{Binding Display}" Foreground="{Binding Foreground}"
+                           FontFamily="{StaticResource MonoFont}" FontSize="11" TextWrapping="Wrap" />
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </ScrollViewer>
+      </Border>
+    </Grid>
+  </Border>
+</Window>

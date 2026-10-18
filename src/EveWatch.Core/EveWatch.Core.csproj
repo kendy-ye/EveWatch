@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!-- 采集层用 Windows.Graphics.Capture 的 WinRT 投影，故 TFM 带 Windows SDK 版本。
+         运行时用 ApiInformation 判能力，SupportedOSPlatformVersion 保持 19041（Win10 2004）。 -->
+    <TargetFramework>net8.0-windows10.0.26100.0</TargetFramework>
+    <SupportedOSPlatformVersion>10.0.19041.0</SupportedOSPlatformVersion>
+    <TargetPlatformMinVersion>10.0.19041.0</TargetPlatformMinVersion>
+    <RootNamespace>EveWatch.Core</RootNamespace>
+    <AssemblyName>EveWatch.Core</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- 星系图静态数据：压缩后的紧凑 JSON，启动时不解析，日志预警启用时懒加载 -->
+    <EmbeddedResource Include="Data\galaxy.json.gz" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="NAudio" Version="2.2.1" />
+    <!-- D3D11 的托管封装：避免手写 ID3D11Device / Context 的 vtable 顺序（WGC 需要） -->
+    <PackageReference Include="Vortice.Direct3D11" Version="3.8.3" />
+    <PackageReference Include="Vortice.DXGI" Version="3.8.3" />
+  </ItemGroup>
+
+</Project>

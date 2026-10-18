@@ -1,0 +1,157 @@
+<Window x:Class="EveWatch.App.Windows.ColorPickerWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="颜色提取器"
+        Width="632" SizeToContent="Height"
+        WindowStyle="None" AllowsTransparency="True" Background="Transparent"
+        ResizeMode="NoResize" ShowInTaskbar="False"
+        WindowStartupLocation="CenterOwner"
+        Foreground="{StaticResource TextBrush}" FontFamily="{StaticResource BodyFont}">
+
+  <Border Background="{StaticResource Surface2Brush}" BorderBrush="{StaticResource BorderStrongBrush}"
+          BorderThickness="1" CornerRadius="10">
+    <Grid>
+      <Grid.RowDefinitions>
+        <RowDefinition Height="48" />
+        <RowDefinition Height="Auto" />
+        <RowDefinition Height="60" />
+      </Grid.RowDefinitions>
+
+      <!-- ================= 标题 ================= -->
+      <Border Grid.Row="0" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,0,1"
+              MouseLeftButtonDown="OnTitleBarMouseDown">
+        <Grid Margin="16,0">
+          <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+            <Path Width="14" Height="16" Stretch="Uniform" Fill="{StaticResource PrimaryBrush}"
+                  Data="M8,0 C8,0 2,8 2,12 A6,6 0 0 0 14,12 C14,8 8,0 8,0 Z" />
+            <TextBlock Text="颜色提取器" FontFamily="{StaticResource DisplayFont}" FontSize="13"
+                       Margin="9,0,0,0" VerticalAlignment="Center" />
+          </StackPanel>
+          <TextBlock x:Name="CtxText" HorizontalAlignment="Right" VerticalAlignment="Center"
+                     Style="{StaticResource DimText}" TextTrimming="CharacterEllipsis" MaxWidth="300" />
+        </Grid>
+      </Border>
+
+      <!-- ================= 主体 ================= -->
+      <Grid Grid.Row="1" Margin="16,16,16,0">
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="252" />
+          <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+
+        <!-- 左：ROI 画面（按像素放大、可滚动） -->
+        <StackPanel Grid.Column="0">
+          <Grid Margin="0,0,0,7">
+            <TextBlock Text="当前 ROI 截图" Style="{StaticResource DimText}" />
+            <TextBlock x:Name="ZoomText" Text="—" Style="{StaticResource MonoText}" FontSize="10.5"
+                       HorizontalAlignment="Right" Foreground="{StaticResource TextDimBrush}" />
+          </Grid>
+          <Border BorderBrush="{StaticResource BorderStrongBrush}" BorderThickness="1" CornerRadius="4"
+                  Background="#FF0B0F13" Width="252" Height="252" HorizontalAlignment="Left">
+            <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+              <Image x:Name="GridImage" Stretch="Fill" Cursor="Cross"
+                     RenderOptions.BitmapScalingMode="NearestNeighbor"
+                     MouseLeftButtonDown="OnGridClick" />
+            </ScrollViewer>
+          </Border>
+          <TextBlock x:Name="HintText" Text="点击画面取该像素颜色，可用滚动条查看整条 ROI。"
+                     Style="{StaticResource DimText}" TextWrapping="Wrap" Margin="0,9,0,0" />
+        </StackPanel>
+
+        <!-- 右：预览与输入 -->
+        <StackPanel Grid.Column="1" Margin="16,0,0,0">
+          <Border Background="{StaticResource BgBrush}" BorderBrush="{StaticResource BorderStrongBrush}"
+                  BorderThickness="1" CornerRadius="6" Padding="11">
+            <StackPanel Orientation="Horizontal">
+              <Border x:Name="Swatch" Width="40" Height="40" CornerRadius="4"
+                      BorderBrush="#33FFFFFF" BorderThickness="1" />
+              <StackPanel Margin="11,0,0,0" VerticalAlignment="Center">
+                <TextBlock x:Name="SwatchHex" Text="#AD0606" FontFamily="{StaticResource MonoFont}" FontSize="15" />
+                <TextBlock x:Name="SwatchSource" Text="来源：当前 ROI 截图" Style="{StaticResource DimText}"
+                           Margin="0,2,0,0" />
+              </StackPanel>
+            </StackPanel>
+          </Border>
+
+          <Grid Margin="0,12,0,0">
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="46" />
+              <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <TextBlock Grid.Column="0" Text="HEX" Style="{StaticResource DimText}" VerticalAlignment="Center" />
+            <TextBox x:Name="HexBox" Grid.Column="1" Style="{StaticResource MonoBox}" TextChanged="OnHexChanged" />
+          </Grid>
+
+          <Grid Margin="0,8,0,0">
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="46" />
+              <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <TextBlock Grid.Column="0" Text="RGB" Style="{StaticResource DimText}" VerticalAlignment="Center" />
+            <StackPanel Grid.Column="1" Orientation="Horizontal">
+              <TextBox x:Name="RBox" Width="60" Style="{StaticResource MonoBox}" TextChanged="OnRgbChanged" />
+              <TextBox x:Name="GBox" Width="60" Style="{StaticResource MonoBox}" Margin="7,0,0,0" TextChanged="OnRgbChanged" />
+              <TextBox x:Name="BBox" Width="60" Style="{StaticResource MonoBox}" Margin="7,0,0,0" TextChanged="OnRgbChanged" />
+            </StackPanel>
+          </Grid>
+
+          <Grid Margin="0,8,0,0">
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="46" />
+              <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <TextBlock Grid.Column="0" Text="名称" Style="{StaticResource DimText}" VerticalAlignment="Center" />
+            <TextBox x:Name="NameBox" Grid.Column="1" />
+          </Grid>
+
+          <TextBlock Text="颜色库" Style="{StaticResource DimText}" Margin="0,14,0,6" />
+          <ScrollViewer MaxHeight="140" VerticalScrollBarVisibility="Auto">
+            <ItemsControl x:Name="PaletteHost">
+              <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                  <WrapPanel />
+                </ItemsPanelTemplate>
+              </ItemsControl.ItemsPanel>
+              <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                  <Border Background="{StaticResource Surface3Brush}" BorderBrush="{StaticResource BorderStrongBrush}"
+                          BorderThickness="1" CornerRadius="13" Height="26" Padding="8,0,4,0" Margin="0,0,6,6">
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                      <Border Width="10" Height="10" CornerRadius="2" Background="{Binding Hex}" />
+                      <TextBlock Text="{Binding Name}" FontSize="11" Margin="7,0,0,0" VerticalAlignment="Center"
+                                 Foreground="{StaticResource TextSubBrush}" />
+                      <Button Style="{StaticResource BtnIcon}" Width="18" Height="18" Margin="6,0,0,0"
+                              Padding="0" Content="✕" FontSize="10" Foreground="{StaticResource TextDimBrush}"
+                              ToolTip="从颜色库移除" Click="OnDeleteColorClick"
+                              Visibility="{Binding Builtin, Converter={StaticResource BoolToVisibility}, ConverterParameter=invert}" />
+                    </StackPanel>
+                  </Border>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </ScrollViewer>
+
+          <TextBlock Style="{StaticResource DimText}" TextWrapping="Wrap" Margin="0,10,0,0"
+                     Text="屏幕取色需要 Windows 的 EyeDropper，WPF 没有对应 API，本工具仅提供像素网格与手动输入两种方式。" />
+        </StackPanel>
+      </Grid>
+
+      <!-- ================= 底部操作 ================= -->
+      <Border Grid.Row="2" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,1,0,0">
+        <Grid Margin="16,0">
+          <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="Auto" />
+          </Grid.ColumnDefinitions>
+          <TextBlock Grid.Column="0" VerticalAlignment="Center" Style="{StaticResource DimText}"
+                     Text="名称留空时使用「自定义 #XXXXXX」。内置颜色不可删除。" />
+          <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+            <Button Style="{StaticResource Btn}" Content="取消" MinWidth="80" Click="OnCancelClick" />
+            <Button Style="{StaticResource BtnPrimary}" Content="添加到颜色库" MinWidth="120"
+                    Margin="8,0,0,0" Click="OnAddClick" />
+          </StackPanel>
+        </Grid>
+      </Border>
+    </Grid>
+  </Border>
+</Window>

@@ -1,0 +1,7 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/EveWatch.App/EveWatch.App.csproj" />
+    <Project Path="src/EveWatch.Core/EveWatch.Core.csproj" />
+    <Project Path="src/EveWatch.Selftest/EveWatch.Selftest.csproj" />
+  </Folder>
+</Solution>

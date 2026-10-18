@@ -1,0 +1,134 @@
+<Window x:Class="EveWatch.App.Windows.CalibrationWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework"
+        Title="框选 ROI"
+        Height="740" Width="1120" MinHeight="500" MinWidth="760"
+        Background="{StaticResource BgBrush}"
+        Foreground="{StaticResource TextBrush}"
+        FontFamily="{StaticResource BodyFont}"
+        WindowStartupLocation="CenterOwner">
+
+  <shell:WindowChrome.WindowChrome>
+    <shell:WindowChrome CaptionHeight="40" ResizeBorderThickness="6" CornerRadius="0"
+                        GlassFrameThickness="0" UseAeroCaptionButtons="False" />
+  </shell:WindowChrome.WindowChrome>
+
+  <Grid>
+    <Grid.RowDefinitions>
+      <RowDefinition Height="40" />
+      <RowDefinition Height="46" />
+      <RowDefinition Height="*" />
+      <RowDefinition Height="58" />
+    </Grid.RowDefinitions>
+
+    <!-- ================= 标题栏 ================= -->
+    <Border Grid.Row="0" Background="#FF0E1318" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,0,1">
+      <Grid>
+        <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="14,0,0,0">
+          <Path Width="14" Height="14" Stretch="Uniform" Stroke="{StaticResource PrimaryBrush}" StrokeThickness="1.4"
+                Data="M7,0 V14 M0,7 H14 M1,1 H4 M1,1 V4 M13,1 H10 M13,1 V4 M1,13 H4 M1,13 V10 M13,13 H10 M13,13 V10" />
+          <TextBlock x:Name="TitleText" Text="框选 ROI" FontFamily="{StaticResource DisplayFont}"
+                     FontSize="13" Margin="9,0,0,0" VerticalAlignment="Center" />
+        </StackPanel>
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right"
+                    shell:WindowChrome.IsHitTestVisibleInChrome="True">
+          <Button Style="{StaticResource BtnGhost}" Width="42" Height="40" Padding="0"
+                  Content="✕" ToolTip="取消" Click="OnCancelClick" />
+        </StackPanel>
+      </Grid>
+    </Border>
+
+    <!-- ================= 工具行 ================= -->
+    <Border Grid.Row="1" Background="{StaticResource SurfaceBrush}"
+            BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,0,1">
+      <Grid Margin="14,0">
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="Auto" />
+          <ColumnDefinition Width="*" />
+          <ColumnDefinition Width="Auto" />
+        </Grid.ColumnDefinitions>
+
+        <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+          <TextBlock Text="缩放" Style="{StaticResource DimText}" VerticalAlignment="Center" />
+          <TextBlock x:Name="ScaleText" Text="—" Style="{StaticResource MonoText}" FontSize="11"
+                     Margin="8,0,10,0" VerticalAlignment="Center" Foreground="{StaticResource TextSubBrush}" />
+          <Button Style="{StaticResource BtnMini}" Content="适应" Tag="fit" Click="OnZoomPresetClick"
+                  ToolTip="缩放到适应窗口" />
+          <Button Style="{StaticResource BtnMini}" Content="100%" Tag="1" Click="OnZoomPresetClick" />
+          <Button Style="{StaticResource BtnMini}" Content="200%" Tag="2" Click="OnZoomPresetClick" />
+          <Button Style="{StaticResource BtnMini}" Content="400%" Tag="4" Click="OnZoomPresetClick" />
+          <TextBlock x:Name="ImageSizeText" Text="—" Style="{StaticResource MonoText}" FontSize="11"
+                     Margin="12,0,0,0" VerticalAlignment="Center" Foreground="{StaticResource TextDimBrush}" />
+        </StackPanel>
+
+        <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center"
+                    HorizontalAlignment="Center">
+          <TextBlock Text="区域" Style="{StaticResource DimText}" VerticalAlignment="Center" />
+          <TextBlock x:Name="CoordText" Text="x 0 · y 0 · w 0 · h 0" Style="{StaticResource MonoText}"
+                     FontSize="12" Margin="8,0,0,0" VerticalAlignment="Center" />
+        </StackPanel>
+
+        <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+          <TextBlock Text="名称" Style="{StaticResource DimText}" VerticalAlignment="Center" />
+          <TextBox x:Name="NameBox" Width="200" Margin="8,0,0,0" />
+        </StackPanel>
+      </Grid>
+    </Border>
+
+    <!-- ================= 底图与框选 ================= -->
+    <Border Grid.Row="2" Background="#FF06080A" Padding="10">
+      <Grid x:Name="Stage" ClipToBounds="True" Background="#FF06080A" Cursor="Cross"
+            MouseDown="OnStageMouseDown"
+            MouseMove="OnStageMouseMove"
+            MouseUp="OnStageMouseUp"
+            MouseWheel="OnStageMouseWheel"
+            SizeChanged="OnStageSizeChanged">
+
+        <!-- 底图放在 Canvas 里，由代码直接设定显示尺寸与位置（图像像素 × 缩放）。
+             用显式尺寸而不是 RenderTransform 叠加布局尺寸，两者的相互作用难以推敲。 -->
+        <Canvas x:Name="ImageLayer" IsHitTestVisible="False">
+          <Image x:Name="Preview" Stretch="Fill" RenderOptions.BitmapScalingMode="HighQuality" />
+        </Canvas>
+
+        <Canvas x:Name="Overlay" IsHitTestVisible="False">
+          <Rectangle x:Name="SelRect" Visibility="Collapsed"
+                     Stroke="#FFF0A02A" StrokeThickness="1.5" Fill="#40F0A02A" />
+        </Canvas>
+
+        <StackPanel x:Name="ErrorPanel" Visibility="Collapsed" HorizontalAlignment="Center"
+                    VerticalAlignment="Center" MaxWidth="440">
+          <Border Width="52" Height="52" CornerRadius="10" BorderBrush="{StaticResource DangerBrush}"
+                  BorderThickness="1" Background="{StaticResource DangerDimBrush}" HorizontalAlignment="Center">
+            <TextBlock Text="!" FontSize="24" FontWeight="Bold" Foreground="{StaticResource DangerBrush}"
+                       HorizontalAlignment="Center" VerticalAlignment="Center" />
+          </Border>
+          <TextBlock x:Name="ErrorText" Margin="0,14,0,0" TextWrapping="Wrap" TextAlignment="Center"
+                     Foreground="#FFFFB0B0" />
+        </StackPanel>
+      </Grid>
+    </Border>
+
+    <!-- ================= 底部操作 ================= -->
+    <Border Grid.Row="3" Background="{StaticResource SurfaceBrush}"
+            BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,1,0,0">
+      <Grid Margin="14,0">
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="*" />
+          <ColumnDefinition Width="Auto" />
+        </Grid.ColumnDefinitions>
+
+        <TextBlock Grid.Column="0" VerticalAlignment="Center" Style="{StaticResource DimText}"
+                   TextTrimming="CharacterEllipsis"
+                   Text="左键拖出矩形，松开后仍可重新拖。滚轮以光标为中心缩放，右键或中键拖动平移。保存时换算回窗口内容区的原始像素坐标。" />
+
+        <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+          <Button x:Name="BtnCancel" Style="{StaticResource Btn}" Content="取消" MinWidth="80"
+                  Click="OnCancelClick" />
+          <Button x:Name="BtnSave" Style="{StaticResource BtnPrimary}" Content="保存" MinWidth="80"
+                  Margin="8,0,0,0" Click="OnSaveClick" />
+        </StackPanel>
+      </Grid>
+    </Border>
+  </Grid>
+</Window>

@@ -1,0 +1,123 @@
+<Window x:Class="EveWatch.App.Windows.RoiWallWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="ROI 并排"
+        SizeToContent="WidthAndHeight"
+        WindowStyle="None" ResizeMode="NoResize"
+        Background="{StaticResource SurfaceBrush}"
+        Topmost="True" ShowInTaskbar="False"
+        WindowStartupLocation="Manual"
+        Foreground="{StaticResource TextBrush}" FontFamily="{StaticResource BodyFont}">
+
+  <!--
+    完全无边框：没有标题栏、没有外框、没有圆角，只有一层底色。
+    移动靠拖动窗口任意位置；开关由主窗口工具栏的按钮承担。
+
+    这里刻意不开 AllowsTransparency。开启它会让窗口变成分层窗口，
+    WPF 对这类窗口会退回软件渲染，而本窗口每 400 ms 就要重画全部 ROI 位图，
+    软件渲染下的开销就是肉眼可见的卡顿。窗口是纯矩形、不需要圆角和异形，
+    分层窗口带来的只有代价。
+  -->
+  <Border x:Name="Root" Background="Transparent"
+          MouseDown="OnRootMouseDown"
+          MouseMove="OnRootMouseMove"
+          MouseUp="OnRootMouseUp"
+          MouseWheel="OnRootMouseWheel">
+    <Grid>
+      <!-- ================= 账号分组，组内各条 ROI 并排 ================= -->
+      <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto" Padding="3">
+        <ItemsControl x:Name="WallHost">
+          <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate>
+              <StackPanel Orientation="Horizontal" />
+            </ItemsPanelTemplate>
+          </ItemsControl.ItemsPanel>
+          <ItemsControl.ItemTemplate>
+            <DataTemplate>
+              <Border x:Name="Group" Background="#FF0F141A" BorderBrush="{StaticResource BorderBrush}"
+                      BorderThickness="1" CornerRadius="3" Padding="1" Margin="0,0,2,0"
+                      VerticalAlignment="Top" Cursor="Hand"
+                      MouseLeftButtonDown="OnGroupClick">
+                <StackPanel>
+                  <!-- 账号名横跨整组，但按列宽截断：名字不能把组撑宽 -->
+                  <TextBlock x:Name="GroupName" Text="{Binding AccountName}"
+                             FontFamily="{StaticResource MonoFont}" FontSize="9"
+                             TextAlignment="Center" TextTrimming="CharacterEllipsis"
+                             MaxWidth="{Binding ContentWidth}"
+                             Foreground="{StaticResource TextSubBrush}" Margin="0,0,0,1" />
+
+                  <ItemsControl ItemsSource="{Binding Columns}">
+                    <ItemsControl.ItemsPanel>
+                      <ItemsPanelTemplate>
+                        <StackPanel Orientation="Horizontal" />
+                      </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate>
+                        <Border x:Name="Strip" Background="Transparent" BorderBrush="Transparent"
+                                BorderThickness="1" CornerRadius="2" Margin="0,0,1,0"
+                                VerticalAlignment="Top">
+                          <StackPanel>
+                            <!-- ROI 的实时画面。显示尺寸 = 原始像素 × 缩放，由 Ctrl+滚轮调整 -->
+                            <Border Background="#FF070A0C"
+                                    MinWidth="14" MinHeight="36" HorizontalAlignment="Center">
+                              <Grid>
+                                <Image Source="{Binding Image}" Stretch="Fill"
+                                       Width="{Binding ImageWidth}" Height="{Binding ImageHeight}"
+                                       RenderOptions.BitmapScalingMode="HighQuality"
+                                       Visibility="{Binding HasImage, Converter={StaticResource BoolToVisibility}}" />
+                                <TextBlock Text="无画面" FontSize="8" TextAlignment="Center" TextWrapping="Wrap"
+                                           HorizontalAlignment="Center" VerticalAlignment="Center"
+                                           Foreground="{StaticResource TextDimBrush}"
+                                           Visibility="{Binding HasImage, Converter={StaticResource BoolToVisibility}, ConverterParameter=invert}" />
+                              </Grid>
+                            </Border>
+                            <TextBlock Text="{Binding IndexTag}" FontFamily="{StaticResource MonoFont}" FontSize="8"
+                                       Foreground="{StaticResource TextDimBrush}" HorizontalAlignment="Center"
+                                       Margin="0,1,0,0" />
+                          </StackPanel>
+                        </Border>
+                        <DataTemplate.Triggers>
+                          <DataTrigger Binding="{Binding Alarm}" Value="True">
+                            <Setter TargetName="Strip" Property="Background" Value="{StaticResource DangerDimBrush}" />
+                            <Setter TargetName="Strip" Property="BorderBrush" Value="#80FF4D4D" />
+                          </DataTrigger>
+                        </DataTemplate.Triggers>
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                </StackPanel>
+              </Border>
+              <DataTemplate.Triggers>
+                <!-- 组内任一条命中，整组描红 -->
+                <DataTrigger Binding="{Binding Alarm}" Value="True">
+                  <Setter TargetName="Group" Property="BorderBrush" Value="#80FF4D4D" />
+                  <Setter TargetName="Group" Property="Background" Value="#1E161A1E" />
+                  <Setter TargetName="GroupName" Property="Foreground" Value="#FFFFA3A3" />
+                </DataTrigger>
+              </DataTemplate.Triggers>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </ScrollViewer>
+
+      <!-- 没有任何可显示 ROI 时的提示，避免出现一个纯黑空窗 -->
+      <TextBlock x:Name="EmptyHint" Visibility="Collapsed"
+                 Text="没有可显示的 ROI&#x0a;请在主窗口为账号添加 ROI 并开始监控"
+                 FontSize="10" TextAlignment="Center" Margin="12"
+                 HorizontalAlignment="Center" VerticalAlignment="Center"
+                 Foreground="{StaticResource TextDimBrush}" />
+
+      <!--
+        统计浮层放在 Canvas 里：Canvas 的期望尺寸恒为 0，统计文字再长也不会把窗口撑宽。
+        位置在 OnOverlaySizeChanged 里手工算（右对齐），因为 Canvas 不支持右对齐。
+        窗口内不提供关闭按钮：开关统一由主窗口工具栏的「开启/关闭 ROI 并排」按钮承担。
+      -->
+      <Canvas x:Name="Overlay" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+              IsHitTestVisible="False" SizeChanged="OnOverlaySizeChanged">
+        <TextBlock x:Name="StatText" Text="" FontFamily="{StaticResource MonoFont}" FontSize="9"
+                   Foreground="{StaticResource TextDimBrush}" Opacity="0.25" />
+      </Canvas>
+    </Grid>
+  </Border>
+</Window>
