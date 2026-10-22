@@ -1,18 +1,15 @@
-using System.Diagnostics;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
 using EveWatch.App.Hotkeys;
+using EveWatch.App.Preview;
 using EveWatch.App.ViewModels;
 using EveWatch.App.Windows;
-using EveWatch.Core.Capture;
 using EveWatch.Core.Config;
-using EveWatch.Core.Diagnostics;
 using EveWatch.Core.Discovery;
 using EveWatch.Core.Intel;
-using EveWatch.Core.Palette;
 
 namespace EveWatch.App;
 
@@ -27,10 +24,14 @@ public partial class MainWindow : Window
     private SettingsWindow? _settingsWindow;
     private IntelSettingsWindow? _intelSettingsWindow;
     private IntelAlertWindow? _intelWindow;
+    private ClientPreviewManager? _previewManager;
+    private ClientPreviewSettingsWindow? _previewSettingsWindow;
 
     private System.Windows.Point _dragOrigin;
     private AccountViewModel? _dragItem;
     private bool _allowClose;
+    private bool _previewStarted;
+    private readonly Dictionary<string, long> _groupWarnAt = [];
 
     public MainWindow(AppServices services)
     {
@@ -53,6 +54,9 @@ public partial class MainWindow : Window
         // 句柄就绪后才能注册全局热键
         SourceInitialized += (_, _) => ApplyHotkeys();
 
+        _previewManager = new ClientPreviewManager(services);
+        _previewManager.StateChanged += SyncPreviewButton;
+
         _refreshTimer = new DispatcherTimer(DispatcherPriority.Background)
         {
             Interval = TimeSpan.FromMilliseconds(500),
@@ -61,7 +65,20 @@ public partial class MainWindow : Window
         _refreshTimer.Tick += (_, _) => _model.RefreshStatus();
         _refreshTimer.Start();
 
-        Loaded += (_, _) => _model.RefreshStatus();
+        Loaded += (_, _) =>
+        {
+            _model.RefreshStatus();
+
+            // 软件启动后默认开启预览；只做一次，之后由工具栏总开关控制
+            if (!_previewStarted)
+            {
+                _previewStarted = true;
+                _previewManager.Start();
+            }
+
+            SyncPreviewButton();
+        };
+
         Closing += OnClosing;
     }
 
@@ -98,6 +115,10 @@ public partial class MainWindow : Window
             _syncWindow?.Close();
             _intelWindow?.Close();
             _intelWindow = null;
+            _previewSettingsWindow?.Close();
+            _previewSettingsWindow = null;
+            _previewManager?.Dispose();
+            _previewManager = null;
             return;
         }
 
@@ -137,67 +158,6 @@ public partial class MainWindow : Window
     }
 
     private void OnSettingsClick(object sender, RoutedEventArgs e) => OpenSettings();
-
-    private void OnShotClick(object sender, RoutedEventArgs e) => ExportShot(interactive: true);
-
-    /// <summary>
-    /// 导出当前选中账号的整窗截图。<paramref name="interactive"/> 为 false 时（快捷键触发）
-    /// 不弹确认框，只把结果写进事件列表。
-    /// </summary>
-    private void ExportShot(bool interactive)
-    {
-        var account = _model.SelectedAccount;
-        if (account is null || account.Hwnd == nint.Zero)
-        {
-            ReportShotFailure("该账号的窗口尚未发现。", interactive);
-            return;
-        }
-
-        var frame = _services.Capture.CaptureFull(account.Hwnd);
-        if (frame is null)
-        {
-            ReportShotFailure("取帧失败，窗口可能处于最小化状态。", interactive);
-            return;
-        }
-
-        var directory = Path.Combine(AppContext.BaseDirectory, "shots");
-        var path = Path.Combine(directory, $"{Sanitize(account.Name)}_full.png");
-
-        try
-        {
-            PngWriter.WriteBgra(path, frame.Bgra, frame.Width, frame.Height);
-        }
-        catch (Exception ex)
-        {
-            ReportShotFailure($"写入失败：{ex.Message}", interactive);
-            return;
-        }
-
-        _services.Events.Info(account.Name, "已导出整窗截图", path);
-
-        if (!interactive)
-        {
-            return;
-        }
-
-        if (MessageBox.Show(this, $"已导出 {frame.Width}×{frame.Height} 的截图：\n{path}\n\n要打开所在目录吗？",
-                "导出截图", MessageBoxButton.YesNo, MessageBoxImage.Information) == MessageBoxResult.Yes)
-        {
-            Process.Start(new ProcessStartInfo("explorer.exe", $"/select,\"{path}\"") { UseShellExecute = true });
-        }
-    }
-
-    private void ReportShotFailure(string message, bool interactive)
-    {
-        if (interactive)
-        {
-            MessageBox.Show(this, message, "导出截图", MessageBoxButton.OK, MessageBoxImage.Warning);
-        }
-        else
-        {
-            _services.Events.Warn("EveWatch", "导出截图失败", message);
-        }
-    }
 
     // ---------------------------------------------------------------- 账号列表
 
@@ -631,6 +591,41 @@ public partial class MainWindow : Window
         }
     }
 
+    private void OnClientPreviewClick(object sender, RoutedEventArgs e)
+    {
+        _previewManager?.SetEnabled(_previewManager.Enabled != true);
+        SyncPreviewButton();
+    }
+
+    private void OnPreviewSettingsClick(object sender, RoutedEventArgs e) => OpenPreviewSettings();
+
+    private void OpenPreviewSettings()
+    {
+        if (_previewManager is null)
+        {
+            return;
+        }
+
+        if (_previewSettingsWindow is { IsLoaded: true })
+        {
+            _previewSettingsWindow.Activate();
+            return;
+        }
+
+        _previewSettingsWindow = new ClientPreviewSettingsWindow(_services, _previewManager, Hotkeys)
+        {
+            Owner = this,
+        };
+        _previewSettingsWindow.Closed += (_, _) => _previewSettingsWindow = null;
+        _previewSettingsWindow.Show();
+        _previewSettingsWindow.Activate();
+    }
+
+    private void SyncPreviewButton()
+    {
+        BtnPreview.Content = _previewManager?.Enabled == true ? "客户端预览 · 开" : "客户端预览";
+    }
+
     private void OnWallClick(object sender, RoutedEventArgs e) => ToggleWall();
 
     private void ToggleWall()
@@ -716,16 +711,20 @@ public partial class MainWindow : Window
                 ToggleWall();
                 break;
 
-            case HotkeyActions.ExportShot:
-                ExportShot(interactive: false);
-                break;
-
             case HotkeyActions.NextAccount:
                 SelectAccountByOffset(1);
                 break;
 
             case HotkeyActions.PreviousAccount:
                 SelectAccountByOffset(-1);
+                break;
+
+            case HotkeyActions.GroupNext when action.GroupId is { } nextGroupId:
+                SelectAccountInGroup(nextGroupId, 1);
+                break;
+
+            case HotkeyActions.GroupPrevious when action.GroupId is { } previousGroupId:
+                SelectAccountInGroup(previousGroupId, -1);
                 break;
 
             case HotkeyActions.OpenSettings:
@@ -747,29 +746,125 @@ public partial class MainWindow : Window
         Activate();
     }
 
-    /// <summary>循环切换选中账号，并把焦点交给它的游戏窗口。只在可见账号之间循环。</summary>
+    /// <summary>循环切换的起点：优先当前前台 EVE 客户端，否则用列表选中项。</summary>
+    private AccountViewModel? CurrentCycleAccount()
+    {
+        var hwnd = WindowFinder.ForegroundHandle;
+        if (hwnd != nint.Zero)
+        {
+            foreach (var window in _services.Directory.Windows)
+            {
+                if (window.Hwnd != hwnd)
+                {
+                    continue;
+                }
+
+                var account = _model.Accounts.FirstOrDefault(item =>
+                    string.Equals(item.Name, window.AccountName, StringComparison.Ordinal));
+
+                if (account is not null)
+                {
+                    return account;
+                }
+            }
+        }
+
+        return _model.SelectedAccount;
+    }
+
+    /// <summary>循环切换选中账号，并把焦点交给它的游戏窗口。未运行的账号直接跳过。</summary>
     private void SelectAccountByOffset(int offset)
     {
-        var accounts = _model.Accounts.Where(a => a.IsVisible).ToList();
+        var accounts = _model.Accounts.ToList();
         if (accounts.Count == 0)
         {
             return;
         }
 
-        var index = _model.SelectedAccount is { } current ? accounts.IndexOf(current) : -1;
-        var next = index < 0
-            ? (offset > 0 ? 0 : accounts.Count - 1)
-            : (index + offset) % accounts.Count;
+        var current = CurrentCycleAccount();
+        var index = current is null
+            ? -1
+            : accounts.FindIndex(account => string.Equals(account.Name, current.Name, StringComparison.Ordinal));
 
-        if (next < 0)
+        var start = index >= 0 ? index : (offset > 0 ? -1 : 0);
+
+        for (var step = 1; step <= accounts.Count; step++)
         {
-            next += accounts.Count;
+            var position = start + offset * step;
+            position %= accounts.Count;
+
+            if (position < 0)
+            {
+                position += accounts.Count;
+            }
+
+            var account = accounts[position];
+            if (!account.IsOnline)
+            {
+                continue;
+            }
+
+            _model.SelectedAccount = account;
+            AccountList.ScrollIntoView(account);
+            FocusAccountWindow(account.Name, account.Hwnd);
+            return;
+        }
+    }
+
+    /// <summary>在指定分组内循环切换，只经过当前可见的客户端。</summary>
+    private void SelectAccountInGroup(string groupId, int offset)
+    {
+        var group = _services.Config.Current.ClientGroups.FirstOrDefault(item =>
+            string.Equals(item.Id, groupId, StringComparison.Ordinal));
+
+        if (group is null)
+        {
+            return;
         }
 
-        var account = accounts[next];
-        _model.SelectedAccount = account;
-        AccountList.ScrollIntoView(account);
-        FocusAccountWindow(account.Name, account.Hwnd);
+        var ordered = group.Accounts
+            .Select(name => (Name: name, Account: _model.Accounts.FirstOrDefault(account =>
+                string.Equals(account.Name, name, StringComparison.OrdinalIgnoreCase))))
+            .ToList();
+
+        if (ordered.Count > 0)
+        {
+            var current = CurrentCycleAccount();
+            var index = current is null
+                ? -1
+                : ordered.FindIndex(item => string.Equals(item.Name, current.Name, StringComparison.OrdinalIgnoreCase));
+
+            var start = index >= 0 ? index : (offset > 0 ? -1 : 0);
+
+            for (var step = 1; step <= ordered.Count; step++)
+            {
+                var position = start + offset * step;
+                position %= ordered.Count;
+
+                if (position < 0)
+                {
+                    position += ordered.Count;
+                }
+
+                var candidate = ordered[position];
+                if (candidate.Account is not { IsOnline: true })
+                {
+                    continue;
+                }
+
+                _model.SelectedAccount = candidate.Account;
+                AccountList.ScrollIntoView(candidate.Account);
+                FocusAccountWindow(candidate.Account.Name, candidate.Account.Hwnd);
+                return;
+            }
+        }
+
+        var now = Environment.TickCount64;
+        if (!_groupWarnAt.TryGetValue(groupId, out var last) || now - last >= 5000)
+        {
+            _groupWarnAt[groupId] = now;
+            _services.Events.Warn("快捷键", $"分组「{group.Name}」没有在线客户端", "先登录组内客户端再切换");
+        }
     }
 
     private void OnIntelSettingsClick(object sender, RoutedEventArgs e) => OpenIntelSettings();
@@ -854,16 +949,5 @@ public partial class MainWindow : Window
         }
 
         return null;
-    }
-
-    private static string Sanitize(string name)
-    {
-        var builder = new System.Text.StringBuilder(name.Length);
-        foreach (var c in name)
-        {
-            builder.Append(Path.GetInvalidFileNameChars().Contains(c) ? '_' : c);
-        }
-
-        return builder.ToString();
     }
 }

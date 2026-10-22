@@ -79,6 +79,132 @@ public sealed class IntelAlertWindowState
     }
 }
 
+/// <summary>单个角色的预览窗状态。</summary>
+public sealed class ClientPreviewAccountState
+{
+    /// <summary>是否显示该角色的预览。</summary>
+    public bool Visible { get; set; } = true;
+
+    /// <summary>预览窗左上角 X（WPF 单位）；<c>null</c> 表示尚未定位。</summary>
+    public double? Left { get; set; }
+
+    /// <summary>预览窗左上角 Y（WPF 单位）；<c>null</c> 表示尚未定位。</summary>
+    public double? Top { get; set; }
+
+    public double Width { get; set; } = 260;
+
+    public double Height { get; set; } = 170;
+
+    /// <summary>该角色的透明度；<c>null</c> 表示跟随全局。</summary>
+    public double? Opacity { get; set; }
+
+    public void Normalize(ClientPreviewState owner)
+    {
+        Width = Math.Clamp(
+            Width <= 0 ? owner.DefaultWidth : Width,
+            ClientPreviewState.MinWidth,
+            ClientPreviewState.MaxWidth);
+
+        Height = Math.Clamp(
+            Height <= 0 ? owner.DefaultHeight : Height,
+            ClientPreviewState.MinHeight,
+            ClientPreviewState.MaxHeight);
+
+        if (Opacity is { } opacity)
+        {
+            Opacity = Math.Clamp(opacity, 0.3, 1.0);
+        }
+    }
+}
+
+/// <summary>客户端预览的全局设置与逐角色布局。</summary>
+public sealed class ClientPreviewState
+{
+    public const double MinWidth = 140;
+    public const double MaxWidth = 800;
+    public const double MinHeight = 100;
+    public const double MaxHeight = 600;
+
+    /// <summary>预览窗是否置顶。</summary>
+    public bool Topmost { get; set; } = true;
+
+    /// <summary>是否在画面下方显示角色名。</summary>
+    public bool ShowLabel { get; set; } = true;
+
+    /// <summary>客户端最小化时是否隐藏其预览（DWM 缩略图对最小化窗口可能停更）。</summary>
+    public bool HideWhenMinimized { get; set; } = true;
+
+    /// <summary>新角色首次出现时使用的宽度。</summary>
+    public double DefaultWidth { get; set; } = 260;
+
+    /// <summary>新角色首次出现时使用的高度。</summary>
+    public double DefaultHeight { get; set; } = 170;
+
+    /// <summary>全局透明度，0.3–1.0；逐角色可覆盖。</summary>
+    public double Opacity { get; set; } = 0.95;
+
+    /// <summary>当前焦点客户端的边框颜色。</summary>
+    public string ActiveBorderColor { get; set; } = "#3DDC84";
+
+    /// <summary>角色名的统一颜色。</summary>
+    public string LabelColor { get; set; } = "#E3EBF2";
+
+    /// <summary>边框粗细，0–6 px。</summary>
+    public double ActiveBorderThickness { get; set; } = 2;
+
+    /// <summary>逐角色的显示开关、位置与尺寸。</summary>
+    public Dictionary<string, ClientPreviewAccountState> Accounts { get; set; } = [];
+
+    public ClientPreviewAccountState For(string accountName)
+    {
+        if (!Accounts.TryGetValue(accountName, out var state))
+        {
+            state = new ClientPreviewAccountState
+            {
+                Width = DefaultWidth,
+                Height = DefaultHeight,
+            };
+
+            Accounts[accountName] = state;
+        }
+
+        return state;
+    }
+
+    public void Normalize()
+    {
+        DefaultWidth = Math.Clamp(DefaultWidth, MinWidth, MaxWidth);
+        DefaultHeight = Math.Clamp(DefaultHeight, MinHeight, MaxHeight);
+        Opacity = Math.Clamp(Opacity, 0.3, 1.0);
+        ActiveBorderThickness = Math.Clamp(ActiveBorderThickness, 0, 6);
+
+        if (!ColorHex.IsValid(ActiveBorderColor))
+        {
+            ActiveBorderColor = "#3DDC84";
+        }
+
+        if (!ColorHex.IsValid(LabelColor))
+        {
+            LabelColor = "#E3EBF2";
+        }
+
+        Accounts ??= [];
+
+        foreach (var account in Accounts.Values)
+        {
+            account.Normalize(this);
+        }
+    }
+
+    private static class ColorHex
+    {
+        public static bool IsValid(string? hex) =>
+            hex is { Length: 7 or 9 }
+            && hex[0] == '#'
+            && hex[1..].All(Uri.IsHexDigit);
+    }
+}
+
 /// <summary>界面状态，持久化为 <c>evewatch.ui.json</c>。与功能配置分开，避免手改配置时误伤界面状态。</summary>
 public sealed class UiState
 {
@@ -99,6 +225,9 @@ public sealed class UiState
 
     /// <summary>日志预警置顶弹窗的位置与显示设置。</summary>
     public IntelAlertWindowState IntelAlertWindow { get; set; } = new();
+
+    /// <summary>客户端预览的开关、边框与逐角色布局。</summary>
+    public ClientPreviewState ClientPreview { get; set; } = new();
 
     /// <summary>按 <see cref="AccountOrder"/> 重排账号列表；未列出的保持原有相对次序排在末尾。</summary>
     public List<T> ApplyOrder<T>(IReadOnlyList<T> items, Func<T, string> nameOf)
@@ -164,6 +293,8 @@ public sealed class UiStateStore
                 Current.WallScale = Math.Clamp(Current.WallScale, 0.2, 1.5);
                 Current.IntelAlertWindow ??= new IntelAlertWindowState();
                 Current.IntelAlertWindow.Normalize();
+                Current.ClientPreview ??= new ClientPreviewState();
+                Current.ClientPreview.Normalize();
                 return Current;
             }
             catch

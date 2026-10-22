@@ -103,6 +103,9 @@ public sealed class AppConfig
     /// <summary>快捷键绑定。默认没有任何绑定，由用户在设置面板中自行指定。</summary>
     public List<HotkeyBinding> Hotkeys { get; set; } = [];
 
+    /// <summary>客户端分组，用于组内循环切换。</summary>
+    public List<ClientGroup> ClientGroups { get; set; } = [];
+
     /// <summary>日志预警配置。</summary>
     public IntelOptions Intel { get; set; } = new();
 
@@ -218,6 +221,40 @@ public sealed class AppConfig
         Palette = palette;
 
         Hotkeys ??= [];
+        ClientGroups ??= [];
+
+        // 分组：补齐 id、去重成员，保留用户设置的循环顺序。
+        var groupIds = new HashSet<string>(StringComparer.Ordinal);
+        var groups = new List<ClientGroup>();
+        foreach (var group in ClientGroups)
+        {
+            if (group is null)
+            {
+                continue;
+            }
+
+            group.Name = string.IsNullOrWhiteSpace(group.Name)
+                ? $"分组 {groups.Count + 1}"
+                : group.Name.Trim();
+
+            if (string.IsNullOrWhiteSpace(group.Id) || !groupIds.Add(group.Id))
+            {
+                group.Id = Guid.NewGuid().ToString("N")[..8];
+                groupIds.Add(group.Id);
+            }
+
+            group.Accounts ??= [];
+            var seenAccounts = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            group.Accounts = group.Accounts
+                .Where(name => !string.IsNullOrWhiteSpace(name))
+                .Select(name => name.Trim())
+                .Where(seenAccounts.Add)
+                .ToList();
+
+            groups.Add(group);
+        }
+
+        ClientGroups = groups;
 
         // 未知功能、重复功能、重复组合一律丢弃：注册阶段无法处理这些冲突
         var seenActions = new HashSet<string>(StringComparer.Ordinal);
@@ -225,15 +262,34 @@ public sealed class AppConfig
         var hotkeys = new List<HotkeyBinding>();
         foreach (var hotkey in Hotkeys)
         {
-            if (hotkey is null || HotkeyActions.Find(hotkey.Action) is null)
+            if (hotkey is null)
             {
                 continue;
+            }
+
+            hotkey.GroupId = hotkey.GroupId?.Trim() ?? string.Empty;
+
+            if (hotkey.Action is HotkeyActions.GroupNext or HotkeyActions.GroupPrevious)
+            {
+                if (!groupIds.Contains(hotkey.GroupId))
+                {
+                    continue;
+                }
+            }
+            else
+            {
+                if (HotkeyActions.Find(hotkey.Action) is null)
+                {
+                    continue;
+                }
+
+                hotkey.GroupId = string.Empty;
             }
 
             hotkey.Modifiers &= HotkeyModifiers.All;
             if (hotkey.VirtualKey <= 0
                 || !seenCombos.Add((hotkey.Modifiers, hotkey.VirtualKey))
-                || !seenActions.Add(hotkey.Action))
+                || !seenActions.Add($"{hotkey.Action}\u001f{hotkey.GroupId}"))
             {
                 continue;
             }

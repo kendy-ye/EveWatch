@@ -27,6 +27,7 @@ public partial class IntelSettingsWindow : Window
     private readonly DispatcherTimer _statusTimer;
 
     private IReadOnlyList<ChatChannelInfo> _allChannels = [];
+    private string _defaultLogDirectory = string.Empty;
     private bool _suppressPopupEvents;
     private bool _suppressRuleEvents;
     private bool _suppressProbeEvents;
@@ -53,6 +54,7 @@ public partial class IntelSettingsWindow : Window
         {
             RefreshIntelStatus();
             ReloadChannelCatalog();
+            _ = DetectLogDirectoryAsync();
             _statusTimer.Start();
         };
         Closed += (_, _) => _statusTimer.Stop();
@@ -66,11 +68,13 @@ public partial class IntelSettingsWindow : Window
         IntelEnabledCheck.IsChecked = intel.Enabled;
         IgnoreSelfCheck.IsChecked = intel.IgnoreSelf;
 
-        // 配置留空时显示自动检测到的目录，避免输入框空白让人以为没有配置。
+        // 配置留空时先显示默认候选位置；实际检测放到后台，避免打开窗口时扫描磁盘卡住界面。
+        _defaultLogDirectory = ChatLogCatalog.CandidateDirectories().FirstOrDefault() ?? string.Empty;
+
         var directory = intel.ChatLogDirectory;
         if (string.IsNullOrWhiteSpace(directory))
         {
-            directory = ChatLogCatalog.FindDirectory(null) ?? string.Empty;
+            directory = _defaultLogDirectory;
         }
 
         ChatLogDirectoryBox.Text = directory;
@@ -78,6 +82,23 @@ public partial class IntelSettingsWindow : Window
         ReloadListenerRows();
         ReloadRuleRows();
         LoadPopupSettings();
+    }
+
+    private async Task DetectLogDirectoryAsync()
+    {
+        if (!string.IsNullOrWhiteSpace(_services.Config.Current.Intel.ChatLogDirectory))
+        {
+            return;
+        }
+
+        var initial = ChatLogDirectoryBox.Text;
+        var detected = await Task.Run(() => ChatLogCatalog.FindDirectory(null));
+
+        if (!string.IsNullOrWhiteSpace(detected)
+            && string.Equals(ChatLogDirectoryBox.Text, initial, StringComparison.Ordinal))
+        {
+            ChatLogDirectoryBox.Text = detected;
+        }
     }
 
     private void SaveIntelConfig()
@@ -102,8 +123,9 @@ public partial class IntelSettingsWindow : Window
         }
         else
         {
-            var expected = ChatLogCatalog.CandidateDirectories().FirstOrDefault()
-                ?? @"%USERPROFILE%\Documents\EVE\logs\Chatlogs";
+            var expected = string.IsNullOrWhiteSpace(_defaultLogDirectory)
+                ? @"%USERPROFILE%\Documents\EVE\logs\Chatlogs"
+                : _defaultLogDirectory;
 
             IntelStatusText.Text =
                 $"{state} · 未找到聊天日志目录{Environment.NewLine}" +
@@ -145,7 +167,7 @@ public partial class IntelSettingsWindow : Window
     private async void ReloadChannelCatalog()
     {
         var configured = _services.Config.Current.Intel.ChatLogDirectory;
-        var directory = ChatLogCatalog.FindDirectory(configured);
+        var directory = await Task.Run(() => ChatLogCatalog.FindDirectory(configured));
 
         if (directory is null)
         {

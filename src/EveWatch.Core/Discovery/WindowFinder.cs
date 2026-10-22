@@ -101,6 +101,9 @@ public static class WindowFinder
     /// <summary>窗口是否仍然存在。</summary>
     public static bool IsAlive(nint hwnd) => hwnd != nint.Zero && IsWindow(hwnd);
 
+    /// <summary>当前前台窗口句柄；没有前台窗口时为 <see cref="nint.Zero"/>。</summary>
+    public static nint ForegroundHandle => GetForegroundWindow();
+
     /// <summary>窗口是否已最小化（最小化时 WGC 取不到帧）。</summary>
     public static bool IsMinimized(nint hwnd) => hwnd != nint.Zero && IsIconic(hwnd);
 
@@ -146,7 +149,17 @@ public static class WindowFinder
     /// </para>
     /// </summary>
     /// <param name="processName">进程名，不含扩展名，例如 <c>exefile</c>。</param>
-    public static IReadOnlyList<WindowInfo> Enumerate(string processName)
+    public static IReadOnlyList<WindowInfo> Enumerate(string processName) =>
+        Enumerate(processName, IsGameWindow);
+
+    /// <summary>
+    /// 枚举停在登录 / 角色选择界面的客户端：标题只有 <c>EVE</c>，还没有角色名。
+    /// <para>这些窗口不进入账号台账，只用于在预览里给一个固定的位置。</para>
+    /// </summary>
+    public static IReadOnlyList<WindowInfo> EnumerateCharacterSelection(string processName) =>
+        Enumerate(processName, title => string.Equals(title.Trim(), "EVE", StringComparison.OrdinalIgnoreCase));
+
+    private static IReadOnlyList<WindowInfo> Enumerate(string processName, Func<string, bool> titleFilter)
     {
         var result = new List<WindowInfo>();
 
@@ -169,7 +182,7 @@ public static class WindowFinder
             }
 
             var title = TitleOf(hwnd);
-            if (!IsGameWindow(title))
+            if (!titleFilter(title))
             {
                 return true;
             }

@@ -188,20 +188,35 @@
     <!-- ================= 工具栏 ================= -->
     <Border Grid.Row="1" Background="{StaticResource SurfaceBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,0,1">
       <Grid Margin="16,0">
-        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-          <Button x:Name="BtnMonitor" Style="{StaticResource BtnPrimary}" Click="OnToggleMonitorClick">
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="*" />
+          <ColumnDefinition Width="Auto" />
+        </Grid.ColumnDefinitions>
+
+        <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+          <!-- 运行控制 -->
+          <Button x:Name="BtnMonitor" Style="{StaticResource BtnPrimary}" Click="OnToggleMonitorClick"
+                  ToolTip="开始 / 停止所有账号的 ROI 监控">
             <TextBlock Text="{Binding MonitorButtonText}" />
           </Button>
-
-          <Button x:Name="BtnMute" Style="{StaticResource BtnGhost}" Margin="6,0,0,0" Click="OnToggleMuteClick">
+          <Button x:Name="BtnMute" Style="{StaticResource BtnGhost}" Margin="6,0,0,0" Click="OnToggleMuteClick"
+                  ToolTip="静音所有报警音频">
             <TextBlock Text="{Binding MuteButtonText}" />
           </Button>
 
           <Border Width="1" Height="22" Background="{StaticResource BorderStrongBrush}" Margin="12,0" />
 
-          <Button x:Name="BtnClone" Style="{StaticResource BtnGhost}" Content="克隆设置" Click="OnCloneClick"
-                  ToolTip="把基准账号的 ROI、命中颜色与报警音频复制到其它账号" />
-          <Button x:Name="BtnWall" Margin="6,0,0,0" Click="OnWallClick"
+          <!-- 客户端相关 -->
+          <Button x:Name="BtnPreview" Style="{StaticResource BtnGhost}" Content="客户端预览"
+                  Click="OnClientPreviewClick" ToolTip="显示 / 隐藏所有角色的实时预览窗" />
+          <Button x:Name="BtnPreviewSettings" Style="{StaticResource BtnIcon}" Margin="4,0,0,0" Content="⚙"
+                  Click="OnPreviewSettingsClick" ToolTip="客户端预览设置（透明度、描边、尺寸、分组快捷键）" />
+          <Button x:Name="BtnIntel" Style="{StaticResource BtnGhost}" Margin="6,0,0,0" Content="频道预警"
+                  Click="OnIntelSettingsClick" ToolTip="监听账号频道、跳数规则与报警声音" />
+
+          <Border Width="1" Height="22" Background="{StaticResource BorderStrongBrush}" Margin="12,0" />
+
+          <Button x:Name="BtnWall" Click="OnWallClick"
                   ToolTip="打开或关闭 ROI 并排显示（打开后窗口内可用 Ctrl+滚轮调整画面大小）">
             <Button.Style>
               <Style TargetType="Button" BasedOn="{StaticResource BtnGhost}">
@@ -216,18 +231,17 @@
             </Button.Style>
             <TextBlock Text="{Binding WallButtonText}" />
           </Button>
-          <Button x:Name="BtnLayoutSync" Style="{StaticResource BtnGhost}" Margin="6,0,0,0" Content="游戏布局同步" Click="OnLayoutSyncClick" />
-          <Button x:Name="BtnIntel" Style="{StaticResource BtnGhost}" Margin="6,0,0,0" Content="频道预警"
-                  Click="OnIntelSettingsClick" ToolTip="监听账号频道、跳数规则与报警声音" />
-          <Button x:Name="BtnSettings" Style="{StaticResource BtnIcon}" Margin="4,0,0,0" Content="⚙" ToolTip="设置（快捷键绑定）" Click="OnSettingsClick" />
+        </StackPanel>
+
+        <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+          <!-- 账号工具 -->
+          <Button x:Name="BtnLayoutSync" Style="{StaticResource BtnGhost}" Content="布局同步"
+                  Click="OnLayoutSyncClick" ToolTip="把游戏内窗口布局同步到其它客户端" />
+          <Button x:Name="BtnClone" Style="{StaticResource BtnGhost}" Margin="6,0,0,0" Content="克隆设置"
+                  Click="OnCloneClick" ToolTip="把基准账号的 ROI、命中颜色与报警音频复制到其它账号" />
 
           <Border Width="1" Height="22" Background="{StaticResource BorderStrongBrush}" Margin="12,0" />
 
-          <Button x:Name="BtnShot" Style="{StaticResource BtnGhost}" Content="导出整窗截图" Click="OnShotClick"
-                  ToolTip="导出当前选中账号的整幅内容区截图，用于核对 ROI 坐标" />
-        </StackPanel>
-
-        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
           <Border Background="{StaticResource Surface2Brush}" BorderBrush="{StaticResource BorderBrush}"
                   BorderThickness="1" CornerRadius="12" Padding="10,3" Margin="0,0,6,0">
             <StackPanel Orientation="Horizontal">
@@ -237,7 +251,7 @@
             </StackPanel>
           </Border>
           <Border Background="{StaticResource DangerDimBrush}" BorderBrush="#55FF4D4D" BorderThickness="1"
-                  CornerRadius="12" Padding="10,3"
+                  CornerRadius="12" Padding="10,3" Margin="0,0,8,0"
                   Visibility="{Binding HasHostile, Converter={StaticResource BoolToVisibility}}">
             <StackPanel Orientation="Horizontal">
               <Ellipse Width="6" Height="6" Fill="{StaticResource DangerBrush}" VerticalAlignment="Center" />
@@ -245,6 +259,8 @@
               <TextBlock Text="{Binding HostileCount}" FontSize="11" FontFamily="{StaticResource MonoFont}" Foreground="#FFFF7070" />
             </StackPanel>
           </Border>
+          <Button x:Name="BtnSettings" Style="{StaticResource BtnIcon}" Content="⚙"
+                  ToolTip="全局设置（快捷键绑定）" Click="OnSettingsClick" />
         </StackPanel>
       </Grid>
     </Border>

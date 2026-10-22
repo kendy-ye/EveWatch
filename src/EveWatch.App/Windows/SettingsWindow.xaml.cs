@@ -10,7 +10,7 @@ using EveWatch.Core.Config;
 
 namespace EveWatch.App.Windows;
 
-/// <summary>设置面板：全局快捷键绑定。</summary>
+/// <summary>设置面板：全局快捷键绑定。客户端分组与分组快捷键在「客户端预览设置」里。</summary>
 public partial class SettingsWindow : Window
 {
     private const string DefaultHint = "点击「绑定」后按下组合键；Esc 取消，Delete 清除当前绑定。";
@@ -30,6 +30,7 @@ public partial class SettingsWindow : Window
 
         BuildRows();
         HotkeyList.ItemsSource = _rows;
+
         SetHint(DefaultHint, false);
 
         Deactivated += (_, _) => EndCapture();
@@ -106,7 +107,8 @@ public partial class SettingsWindow : Window
         var modifiers = ToModifiers(Keyboard.Modifiers);
 
         var conflict = _services.Config.Current.Hotkeys.FirstOrDefault(b =>
-            b.Action != row.Action.Id && b.Modifiers == modifiers && b.VirtualKey == virtualKey);
+            !(b.Action == row.Action.Id && string.Equals(b.GroupId, row.GroupId, StringComparison.Ordinal))
+            && b.Modifiers == modifiers && b.VirtualKey == virtualKey);
 
         if (conflict is not null)
         {
@@ -179,11 +181,12 @@ public partial class SettingsWindow : Window
     private void ApplyBinding(HotkeyRow row, int modifiers, int virtualKey)
     {
         var bindings = _services.Config.Current.Hotkeys;
-        var binding = bindings.FirstOrDefault(b => b.Action == row.Action.Id);
+        var binding = bindings.FirstOrDefault(b =>
+            b.Action == row.Action.Id && string.Equals(b.GroupId, row.GroupId, StringComparison.Ordinal));
 
         if (binding is null)
         {
-            binding = new HotkeyBinding { Action = row.Action.Id };
+            binding = new HotkeyBinding { Action = row.Action.Id, GroupId = row.GroupId };
             bindings.Add(binding);
         }
 
@@ -199,7 +202,8 @@ public partial class SettingsWindow : Window
 
     private void ClearBinding(HotkeyRow row)
     {
-        var binding = _services.Config.Current.Hotkeys.FirstOrDefault(b => b.Action == row.Action.Id);
+        var binding = _services.Config.Current.Hotkeys.FirstOrDefault(b =>
+            b.Action == row.Action.Id && string.Equals(b.GroupId, row.GroupId, StringComparison.Ordinal));
         if (binding is not null)
         {
             _services.Config.Current.Hotkeys.Remove(binding);
@@ -219,7 +223,7 @@ public partial class SettingsWindow : Window
             return;
         }
 
-        if (MessageBox.Show(this, "清除全部快捷键绑定？", "快捷键设置",
+        if (MessageBox.Show(this, "清除全部快捷键绑定（包含各分组的快捷键）？", "快捷键设置",
                 MessageBoxButton.OKCancel, MessageBoxImage.Question) != MessageBoxResult.OK)
         {
             return;
@@ -310,15 +314,18 @@ public sealed class HotkeyRow : INotifyPropertyChanged
 {
     private bool _isCapturing;
 
-    public HotkeyRow(HotkeyActionInfo action, HotkeyBinding? binding)
+    public HotkeyRow(HotkeyActionInfo action, HotkeyBinding? binding, string? groupId = null)
     {
         Action = action;
         Binding = binding;
+        GroupId = groupId ?? string.Empty;
     }
 
     public HotkeyActionInfo Action { get; }
 
     public HotkeyBinding? Binding { get; set; }
+
+    public string GroupId { get; }
 
     public bool IsCapturing
     {

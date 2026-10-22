@@ -46,8 +46,34 @@ public sealed class ChatLogCatalog
 
     private sealed record CacheEntry(DateTime LastWriteTimeUtc, long Length, ChatLogFile? File);
 
-    /// <summary>常见日志目录候选，按优先级排列。</summary>
+    private static readonly object CandidateSync = new();
+    private static IReadOnlyList<string>? _candidateCache;
+    private static DateTime _candidateCacheAt;
+
+    /// <summary>常见日志目录候选，按优先级排列。结果缓存 30 秒，避免反复扫描磁盘。</summary>
     public static IReadOnlyList<string> CandidateDirectories()
+    {
+        lock (CandidateSync)
+        {
+            if (_candidateCache is not null
+                && (DateTime.UtcNow - _candidateCacheAt).TotalSeconds < 30)
+            {
+                return _candidateCache;
+            }
+        }
+
+        var candidates = BuildCandidates();
+
+        lock (CandidateSync)
+        {
+            _candidateCache = candidates;
+            _candidateCacheAt = DateTime.UtcNow;
+        }
+
+        return candidates;
+    }
+
+    private static IReadOnlyList<string> BuildCandidates()
     {
         var candidates = new List<string>();
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);

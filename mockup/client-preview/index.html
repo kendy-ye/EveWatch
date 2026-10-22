@@ -1,0 +1,733 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>EveWatch · 客户端预览布局</title>
+<style>
+  :root {
+    --bg: #0a0d10;
+    --surface: #11161b;
+    --surface2: #151b21;
+    --surface3: #1b232b;
+    --border: #232c35;
+    --border-strong: #2d3944;
+    --primary: #f0a02a;
+    --primary-hi: #ffbf66;
+    --danger: #ff4d4d;
+    --text: #e3ebf2;
+    --text-sub: #8a98a6;
+    --text-dim: #5a6672;
+    --active: #3ddc84;
+    --bw: 3px;
+    --gap: 12px;
+    --mono: "Cascadia Mono", "Consolas", monospace;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 13px/1.45 "Segoe UI Variable Text", "Microsoft YaHei UI", sans-serif;
+    overflow: hidden;
+  }
+
+  .app { display: flex; flex-direction: column; height: 100vh; }
+
+  /* ---------------- 顶栏 ---------------- */
+  .topbar {
+    height: 50px; flex: 0 0 50px;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 16px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+  }
+  .brand { display: flex; align-items: center; gap: 10px; }
+  .logo {
+    width: 28px; height: 28px; border-radius: 7px;
+    background: linear-gradient(145deg, #2a323c, #11161b);
+    border: 1px solid var(--border-strong);
+    display: grid; place-items: center;
+    color: var(--primary); font: 700 13px var(--mono);
+  }
+  .brand strong { font-size: 12px; letter-spacing: .12em; }
+  .brand span { color: var(--text-dim); font-size: 11px; }
+  .top-actions { display: flex; align-items: center; gap: 8px; }
+  .chip {
+    padding: 4px 10px; border-radius: 999px; font-size: 10.5px;
+    background: var(--surface3); color: var(--text-sub);
+    border: 1px solid var(--border);
+  }
+  .btn {
+    height: 30px; padding: 0 12px; border-radius: 6px; cursor: pointer;
+    background: transparent; color: var(--text-sub);
+    border: 1px solid transparent;
+    font: 11.5px "Microsoft YaHei UI", sans-serif;
+  }
+  .btn:hover { background: var(--surface3); color: var(--text); border-color: var(--border-strong); }
+  .btn.primary { background: var(--primary); color: #1a1204; font-weight: 600; border-color: var(--primary); }
+  .btn.primary:hover { background: var(--primary-hi); }
+  .btn.danger { color: #ff9b9b; border-color: #4a2626; background: #231416; }
+  .btn.danger:hover { background: #2d181a; }
+
+  /* ---------------- 工作区 ---------------- */
+  .workspace { flex: 1; display: flex; min-height: 0; }
+  .desk {
+    position: relative; flex: 1; min-width: 0; overflow: hidden;
+    background:
+      radial-gradient(ellipse at 18% 12%, rgba(48, 82, 120, .20), transparent 55%),
+      radial-gradient(ellipse at 82% 88%, rgba(80, 46, 92, .18), transparent 58%),
+      linear-gradient(160deg, #070a0d 0%, #0a0f14 55%, #07090c 100%);
+  }
+  .desk::before {
+    content: ""; position: absolute; inset: 0; pointer-events: none;
+    background-image:
+      radial-gradient(1px 1px at 12% 22%, rgba(255,255,255,.55), transparent 100%),
+      radial-gradient(1px 1px at 32% 62%, rgba(255,255,255,.35), transparent 100%),
+      radial-gradient(1px 1px at 58% 18%, rgba(255,255,255,.45), transparent 100%),
+      radial-gradient(1px 1px at 76% 48%, rgba(255,255,255,.30), transparent 100%),
+      radial-gradient(1px 1px at 88% 76%, rgba(255,255,255,.40), transparent 100%),
+      radial-gradient(1px 1px at 44% 86%, rgba(255,255,255,.25), transparent 100%);
+  }
+  .monitor-line {
+    position: absolute; top: 0; bottom: 0; left: 62%;
+    border-left: 1px dashed rgba(240, 160, 42, .18); pointer-events: none;
+  }
+  .monitor-label {
+    position: absolute; top: 10px; font: 9px var(--mono);
+    color: rgba(138, 152, 166, .55); pointer-events: none;
+    letter-spacing: .08em;
+  }
+  .monitor-label.a { left: 14px; }
+  .monitor-label.b { left: calc(62% + 14px); }
+
+  .hint {
+    position: absolute; left: 14px; bottom: 12px;
+    font-size: 10.5px; color: var(--text-dim); pointer-events: none;
+  }
+
+  /* ---------------- 预览窗 ---------------- */
+  .preview {
+    position: absolute;
+    display: flex; flex-direction: column;
+    background: var(--border-strong);
+    padding: var(--bw);
+    border-radius: 8px;
+    box-shadow: 0 10px 28px rgba(0, 0, 0, .5);
+    cursor: grab;
+    user-select: none;
+  }
+  .preview.active { background: var(--active); box-shadow: 0 0 0 1px rgba(61, 220, 132, .25), 0 10px 30px rgba(0, 0, 0, .55); }
+  .preview.dragging { cursor: grabbing; }
+  .preview.hidden { display: none; }
+
+  .thumb {
+    position: relative; flex: 1; min-height: 0; overflow: hidden;
+    border-radius: 4px 4px 0 0;
+    background:
+      radial-gradient(circle at 72% 28%, hsla(var(--hue), 68%, 60%, .28), transparent 52%),
+      radial-gradient(circle at 24% 78%, hsla(calc(var(--hue) + 40), 62%, 52%, .20), transparent 56%),
+      #04060a;
+  }
+  .thumb::before {
+    content: ""; position: absolute; inset: 0;
+    background-image:
+      radial-gradient(1px 1px at 18% 30%, rgba(255,255,255,.6), transparent 100%),
+      radial-gradient(1px 1px at 66% 18%, rgba(255,255,255,.5), transparent 100%),
+      radial-gradient(1px 1px at 40% 62%, rgba(255,255,255,.4), transparent 100%),
+      radial-gradient(1px 1px at 84% 72%, rgba(255,255,255,.45), transparent 100%);
+    opacity: .8;
+  }
+  .hud-top {
+    position: absolute; left: 7px; top: 6px; right: 7px;
+    display: flex; gap: 3px; align-items: center;
+  }
+  .hud-top i {
+    display: block; height: 3px; border-radius: 2px;
+    background: rgba(120, 210, 255, .55);
+  }
+  .hud-top i:nth-child(1) { width: 26px; background: rgba(255, 90, 90, .75); }
+  .hud-top i:nth-child(2) { width: 34px; background: rgba(255, 190, 70, .6); }
+  .hud-top i:nth-child(3) { width: 18px; background: rgba(120, 210, 255, .5); }
+
+  .hud-right {
+    position: absolute; right: 7px; top: 16px; width: 34%;
+    display: flex; flex-direction: column; gap: 3px;
+  }
+  .hud-right span {
+    height: 4px; border-radius: 2px;
+    background: linear-gradient(90deg, rgba(120, 210, 255, .38), rgba(120, 210, 255, .06));
+  }
+  .hud-right span:nth-child(2n) { width: 76%; background: linear-gradient(90deg, rgba(255, 120, 120, .35), rgba(255, 120, 120, .05)); }
+  .hud-right span:nth-child(3n) { width: 58%; }
+
+  .ship {
+    position: absolute; left: 50%; top: 56%; width: 46%; height: 38%;
+    transform: translate(-50%, -50%) rotate(-8deg);
+    background: linear-gradient(155deg, rgba(210, 224, 238, .85), rgba(80, 96, 112, .55) 55%, rgba(20, 26, 32, .3));
+    clip-path: polygon(4% 46%, 34% 30%, 52% 4%, 62% 30%, 96% 46%, 66% 62%, 58% 96%, 46% 66%, 18% 62%);
+    filter: drop-shadow(0 0 10px hsla(var(--hue), 60%, 60%, .25));
+    opacity: .9;
+  }
+  .cap-ring {
+    position: absolute; left: 50%; bottom: 8px; width: 26px; height: 26px;
+    margin-left: -13px; border-radius: 50%;
+    border: 2px solid rgba(120, 210, 255, .35);
+    border-top-color: rgba(255, 190, 70, .8);
+    transform: rotate(-30deg);
+  }
+
+  .caption {
+    height: 21px; flex: 0 0 21px; margin-top: var(--bw);
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 6px; border-radius: 0 0 4px 4px;
+    background: #0d1217; color: var(--text-sub);
+    font: 10.5px var(--mono);
+  }
+  .caption b { font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .caption em {
+    font-style: normal; font-size: 8.5px; color: #7fd6a3;
+    opacity: .9; margin-left: 6px;
+  }
+  .caption.hide { display: none; }
+
+  .resize {
+    position: absolute; right: 0; bottom: 0; width: 14px; height: 14px;
+    cursor: nwse-resize; z-index: 5;
+    background:
+      linear-gradient(135deg, transparent 45%, var(--text-dim) 45%, var(--text-dim) 52%, transparent 52%),
+      linear-gradient(135deg, transparent 62%, var(--text-dim) 62%, var(--text-dim) 69%, transparent 69%);
+    opacity: .55;
+  }
+
+  /* ---------------- 设置面板 ---------------- */
+  .settings {
+    width: 380px; flex: 0 0 380px; min-height: 0;
+    display: flex; flex-direction: column;
+    background: var(--surface); border-left: 1px solid var(--border);
+  }
+  .settings.closed { display: none; }
+  .panel-head {
+    height: 44px; flex: 0 0 44px; display: flex; align-items: center; justify-content: space-between;
+    padding: 0 12px 0 14px; border-bottom: 1px solid var(--border);
+    font-size: 12px; font-weight: 600;
+  }
+  .panel-head button {
+    width: 28px; height: 28px; border: 0; border-radius: 6px;
+    background: transparent; color: var(--text-sub); cursor: pointer;
+  }
+  .panel-head button:hover { background: var(--surface3); color: var(--text); }
+  .panel-body { flex: 1; overflow: auto; padding: 14px; }
+
+  .group { margin-bottom: 18px; }
+  .group h4 {
+    margin: 0 0 9px; font-size: 10px; font-weight: 600; letter-spacing: .1em;
+    color: var(--text-dim); text-transform: uppercase;
+  }
+  .row { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 8px 0; }
+  .row label { color: var(--text-sub); font-size: 11.5px; }
+  .row .val { width: 44px; text-align: right; font: 10.5px var(--mono); color: var(--text-sub); }
+  input[type="number"], select {
+    height: 27px; width: 76px; padding: 0 7px; border-radius: 5px;
+    background: var(--surface2); color: var(--text);
+    border: 1px solid var(--border-strong); outline: none;
+    font: 11px var(--mono);
+  }
+  select { width: 96px; font-family: inherit; }
+  input[type="range"] { flex: 1; accent-color: var(--primary); }
+  input[type="color"] {
+    width: 42px; height: 27px; padding: 0; border: 1px solid var(--border-strong);
+    border-radius: 5px; background: var(--surface2); cursor: pointer;
+  }
+  .switch { position: relative; width: 34px; height: 18px; flex: 0 0 34px; }
+  .switch input { opacity: 0; width: 0; height: 0; }
+  .switch i {
+    position: absolute; inset: 0; border-radius: 999px; cursor: pointer;
+    background: #2a343e; border: 1px solid var(--border-strong); transition: .15s;
+  }
+  .switch i::after {
+    content: ""; position: absolute; top: 2px; left: 2px; width: 12px; height: 12px;
+    border-radius: 50%; background: #77848f; transition: .15s;
+  }
+  .switch input:checked + i { background: rgba(240, 160, 42, .28); border-color: rgba(240, 160, 42, .6); }
+  .switch input:checked + i::after { left: 18px; background: var(--primary-hi); }
+
+  .actions { display: flex; gap: 8px; margin-top: 10px; }
+  .actions .btn { flex: 1; height: 30px; border: 1px solid var(--border-strong); }
+
+  table { width: 100%; border-collapse: collapse; }
+  th {
+    text-align: left; font-size: 9px; font-weight: 600; color: var(--text-dim);
+    padding: 0 4px 6px; border-bottom: 1px solid var(--border);
+    letter-spacing: .06em;
+  }
+  td { padding: 7px 4px; border-bottom: 1px solid rgba(35, 44, 53, .55); font-size: 10.5px; vertical-align: middle; }
+  td.name { max-width: 96px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  td.pos { font: 9px var(--mono); color: var(--text-dim); }
+  td .mini-check { accent-color: var(--primary); }
+  td select { width: 70px; height: 24px; font-size: 10px; }
+  .row-off td { opacity: .45; }
+
+  .note { font-size: 10px; color: var(--text-dim); line-height: 1.6; margin-top: 8px; }
+  .empty {
+    position: absolute; inset: 0; display: grid; place-items: center;
+    color: var(--text-dim); font-size: 12px; pointer-events: none;
+  }
+  .empty.hidden { display: none; }
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="topbar">
+    <div class="brand">
+      <div class="logo">EW</div>
+      <strong>EVEWATCH</strong>
+      <span>客户端预览 · UI 布局</span>
+    </div>
+    <div class="top-actions">
+      <span class="chip" id="summaryChip">8 个客户端</span>
+      <button class="btn" id="toggleAllBtn">隐藏全部</button>
+      <button class="btn primary" id="openSettingsBtn">预览设置</button>
+    </div>
+  </header>
+
+  <div class="workspace">
+    <main class="desk" id="desk">
+      <div class="monitor-line"></div>
+      <div class="monitor-label a">DISPLAY 1 · 主屏</div>
+      <div class="monitor-label b">DISPLAY 2</div>
+      <div class="hint">拖动移动 · 拖右下角缩放 · 单击切换活动客户端</div>
+      <div class="empty hidden" id="emptyState">预览已关闭</div>
+    </main>
+
+    <aside class="settings" id="settingsPanel">
+      <div class="panel-head">
+        客户端预览设置
+        <button id="closeSettingsBtn" title="关闭">✕</button>
+      </div>
+      <div class="panel-body">
+        <section class="group">
+          <h4>全局</h4>
+          <div class="row">
+            <label>启用预览</label>
+            <span class="switch"><input type="checkbox" id="enabled" checked /><i></i></span>
+          </div>
+          <div class="row">
+            <label>置顶显示</label>
+            <span class="switch"><input type="checkbox" id="topmost" checked /><i></i></span>
+          </div>
+          <div class="row">
+            <label>默认宽 × 高</label>
+            <div style="display:flex;align-items:center;gap:6px">
+              <input type="number" id="defaultW" value="260" min="140" max="800" />
+              <span style="color:var(--text-dim)">×</span>
+              <input type="number" id="defaultH" value="170" min="100" max="600" />
+            </div>
+          </div>
+          <div class="row">
+            <label>透明度</label>
+            <input type="range" id="opacity" min="30" max="100" value="95" />
+            <span class="val" id="opacityVal">95%</span>
+          </div>
+          <div class="row">
+            <label>活动边框颜色</label>
+            <input type="color" id="activeColor" value="#3ddc84" />
+          </div>
+          <div class="row">
+            <label>边框粗细</label>
+            <input type="range" id="borderWidth" min="0" max="6" value="3" />
+            <span class="val" id="borderWidthVal">3px</span>
+          </div>
+          <div class="row">
+            <label>显示角色名</label>
+            <span class="switch"><input type="checkbox" id="showLabel" checked /><i></i></span>
+          </div>
+          <div class="row">
+            <label>最小化时隐藏</label>
+            <span class="switch"><input type="checkbox" id="hideMin" checked /><i></i></span>
+          </div>
+          <div class="actions">
+            <button class="btn" id="autoArrange">自动排列</button>
+            <button class="btn danger" id="resetLayout">重置布局</button>
+          </div>
+          <p class="note">取消勾选某一角色只隐藏它的预览，不影响 ROI 监控和报警。</p>
+        </section>
+
+        <section class="group">
+          <h4>角色预览</h4>
+          <table>
+            <thead>
+              <tr>
+                <th>角色</th>
+                <th>显示</th>
+                <th>尺寸</th>
+                <th>透明度</th>
+                <th>位置</th>
+              </tr>
+            </thead>
+            <tbody id="accountRows"></tbody>
+          </table>
+        </section>
+      </div>
+    </aside>
+  </div>
+</div>
+
+<script>
+(function () {
+  const accounts = [
+    { name: "TieTouWa A", hue: 205, running: true },
+    { name: "String A", hue: 168, running: true },
+    { name: "String B", hue: 282, running: true },
+    { name: "String C", hue: 128, running: true },
+    { name: "String D", hue: 32, hue2: 0, running: true },
+    { name: "String E", hue: 248, running: true },
+    { name: "String F", hue: 305, running: true },
+    { name: "YTT", hue: 52, running: true }
+  ];
+
+  const STORAGE_KEY = "evewatch.preview.mock.v1";
+  const desk = document.getElementById("desk");
+  const emptyState = document.getElementById("emptyState");
+  const settingsPanel = document.getElementById("settingsPanel");
+  const summaryChip = document.getElementById("summaryChip");
+  const toggleAllBtn = document.getElementById("toggleAllBtn");
+
+  let state = loadState();
+  let activeName = accounts[0].name;
+
+  function defaults() {
+    return {
+      enabled: true,
+      topmost: true,
+      showLabel: true,
+      hideMin: true,
+      defaultW: 260,
+      defaultH: 170,
+      opacity: 95,
+      activeColor: "#3ddc84",
+      borderWidth: 3,
+      accounts: {}
+    };
+  }
+
+  function loadState() {
+    const base = defaults();
+    try {
+      const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+      const merged = Object.assign(base, saved);
+      merged.accounts = saved.accounts || {};
+      return merged;
+    } catch (e) {
+      return base;
+    }
+  }
+
+  function saveState() {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  }
+
+  function ensureAccount(name) {
+    if (!state.accounts[name]) {
+      state.accounts[name] = { visible: true, left: null, top: null, width: state.defaultW, height: state.defaultH, opacity: "" };
+    }
+    return state.accounts[name];
+  }
+
+  function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
+
+  function applyGlobals() {
+    document.documentElement.style.setProperty("--active", state.activeColor);
+    document.documentElement.style.setProperty("--bw", state.borderWidth + "px");
+    emptyState.classList.toggle("hidden", state.enabled);
+    summaryChip.textContent = accounts.length + " 个客户端";
+    toggleAllBtn.textContent = state.enabled ? "隐藏全部" : "显示全部";
+  }
+
+  function autoArrange() {
+    const width = state.defaultW;
+    const height = state.defaultH;
+    const gap = 12;
+    const deskW = Math.max(320, desk.clientWidth);
+    const deskH = Math.max(240, desk.clientHeight);
+    const columns = Math.max(1, Math.floor((deskW - 24 + gap) / (width + gap)));
+    const rows = Math.ceil(accounts.length / columns);
+    const totalW = columns * width + (columns - 1) * gap;
+    const totalH = rows * height + (rows - 1) * gap;
+    const startX = Math.max(14, (deskW - totalW) / 2);
+    const startY = Math.max(14, (deskH - totalH) / 2);
+
+    accounts.forEach(function (account, index) {
+      const col = index % columns;
+      const row = Math.floor(index / columns);
+      const item = ensureAccount(account.name);
+      item.left = Math.round(startX + col * (width + gap));
+      item.top = Math.round(startY + row * (height + gap));
+      item.width = width;
+      item.height = height;
+    });
+
+    saveState();
+    render();
+  }
+
+  function render() {
+    applyGlobals();
+    renderPreviews();
+    renderRows();
+  }
+
+  function renderPreviews() {
+    desk.querySelectorAll(".preview").forEach(function (el) { el.remove(); });
+    if (!state.enabled) return;
+
+    accounts.forEach(function (account) {
+      const item = ensureAccount(account.name);
+      if (item.visible === false) return;
+
+      const el = document.createElement("article");
+      el.className = "preview" + (account.name === activeName ? " active" : "");
+      el.dataset.name = account.name;
+      el.style.setProperty("--hue", account.hue);
+      el.style.left = (item.left ?? 40) + "px";
+      el.style.top = (item.top ?? 40) + "px";
+      el.style.width = item.width + "px";
+      el.style.height = item.height + "px";
+      el.style.opacity = String((item.opacity === "" ? state.opacity : Number(item.opacity)) / 100);
+      el.style.zIndex = account.name === activeName ? 30 : 10;
+
+      el.innerHTML =
+        '<div class="thumb">' +
+          '<div class="hud-top"><i></i><i></i><i></i></div>' +
+          '<div class="hud-right"><span></span><span></span><span></span><span></span><span></span><span></span></div>' +
+          '<div class="ship"></div>' +
+          '<div class="cap-ring"></div>' +
+        '</div>' +
+        '<div class="caption' + (state.showLabel ? "" : " hide") + '">' +
+          '<b>' + account.name + '</b>' +
+          (account.running ? '<em>运行中</em>' : '<em style="color:#8a98a6">未运行</em>') +
+        '</div>' +
+        '<div class="resize" title="拖动缩放"></div>';
+
+      if (!state.topmost) el.style.zIndex = account.name === activeName ? 30 : 10;
+
+      el.addEventListener("pointerdown", onPreviewPointerDown);
+      desk.appendChild(el);
+    });
+  }
+
+  function renderRows() {
+    const tbody = document.getElementById("accountRows");
+    tbody.innerHTML = "";
+
+    accounts.forEach(function (account) {
+      const item = ensureAccount(account.name);
+      const tr = document.createElement("tr");
+      if (item.visible === false) tr.className = "row-off";
+
+      const position = (item.left == null || item.top == null)
+        ? "—"
+        : Math.round(item.left) + "," + Math.round(item.top);
+
+      tr.innerHTML =
+        '<td class="name" title="' + account.name + '">' + account.name + '</td>' +
+        '<td><input class="mini-check" type="checkbox" ' + (item.visible !== false ? "checked" : "") + ' data-act="visible" /></td>' +
+        '<td><input type="number" value="' + item.width + '" min="140" max="800" style="width:58px" data-act="width" /><span style="color:var(--text-dim)"> × </span><input type="number" value="' + item.height + '" min="100" max="600" style="width:52px" data-act="height" /></td>' +
+        '<td><select data-act="opacity">' +
+          '<option value="">跟随</option>' +
+          '<option value="80"' + (item.opacity === "80" ? " selected" : "") + '>80%</option>' +
+          '<option value="60"' + (item.opacity === "60" ? " selected" : "") + '>60%</option>' +
+        '</select></td>' +
+        '<td class="pos">' + position + '</td>';
+
+      tr.querySelector('[data-act="visible"]').addEventListener("change", function (e) {
+        item.visible = e.target.checked;
+        saveState();
+        render();
+      });
+
+      tr.querySelectorAll('[data-act="width"], [data-act="height"]').forEach(function (input) {
+        input.addEventListener("change", function (e) {
+          const key = e.target.dataset.act;
+          item[key] = clamp(Number(e.target.value) || (key === "width" ? 260 : 170),
+            key === "width" ? 140 : 100,
+            key === "width" ? 800 : 600);
+          saveState();
+          render();
+        });
+      });
+
+      tr.querySelector('[data-act="opacity"]').addEventListener("change", function (e) {
+        item.opacity = e.target.value;
+        saveState();
+        render();
+      });
+
+      tbody.appendChild(tr);
+    });
+  }
+
+  /* ---------------- 拖动 / 缩放 / 激活 ---------------- */
+  let drag = null;
+
+  function onPreviewPointerDown(e) {
+    if (e.button !== 0) return;
+    const el = e.currentTarget;
+    const name = el.dataset.name;
+    const item = ensureAccount(name);
+
+    if (e.target.classList.contains("resize")) {
+      drag = { mode: "resize", name: name, startX: e.clientX, startY: e.clientY, width: item.width, height: item.height, el: el };
+      el.setPointerCapture(e.pointerId);
+      e.preventDefault();
+      return;
+    }
+
+    drag = { mode: "move", name: name, startX: e.clientX, startY: e.clientY, left: item.left, top: item.top, el: el, moved: false };
+    el.setPointerCapture(e.pointerId);
+    e.preventDefault();
+  }
+
+  window.addEventListener("pointermove", function (e) {
+    if (!drag) return;
+    const dx = e.clientX - drag.startX;
+    const dy = e.clientY - drag.startY;
+
+    if (drag.mode === "move") {
+      if (!drag.moved && Math.abs(dx) + Math.abs(dy) > 4) {
+        drag.moved = true;
+        drag.el.classList.add("dragging");
+      }
+      if (!drag.moved) return;
+
+      const item = ensureAccount(drag.name);
+      item.left = clamp(drag.left + dx, 0, Math.max(0, desk.clientWidth - 60));
+      item.top = clamp(drag.top + dy, 0, Math.max(0, desk.clientHeight - 40));
+      drag.el.style.left = item.left + "px";
+      drag.el.style.top = item.top + "px";
+    } else {
+      const item = ensureAccount(drag.name);
+      item.width = clamp(drag.width + dx, 140, 800);
+      item.height = clamp(drag.height + dy, 100, 600);
+      drag.el.style.width = item.width + "px";
+      drag.el.style.height = item.height + "px";
+    }
+  });
+
+  window.addEventListener("pointerup", function () {
+    if (!drag) return;
+
+    if (drag.mode === "move" && !drag.moved) {
+      activeName = drag.name;
+    }
+
+    drag.el.classList.remove("dragging");
+    saveState();
+    drag = null;
+    render();
+  });
+
+  /* ---------------- 设置事件 ---------------- */
+  function bindSwitch(id, key) {
+    document.getElementById(id).addEventListener("change", function (e) {
+      state[key] = e.target.checked;
+      saveState();
+      render();
+    });
+  }
+
+  bindSwitch("enabled", "enabled");
+  bindSwitch("topmost", "topmost");
+  bindSwitch("showLabel", "showLabel");
+  bindSwitch("hideMin", "hideMin");
+
+  document.getElementById("defaultW").addEventListener("change", function (e) {
+    state.defaultW = clamp(Number(e.target.value) || 260, 140, 800);
+    saveState();
+  });
+  document.getElementById("defaultH").addEventListener("change", function (e) {
+    state.defaultH = clamp(Number(e.target.value) || 170, 100, 600);
+    saveState();
+  });
+
+  document.getElementById("opacity").addEventListener("input", function (e) {
+    state.opacity = Number(e.target.value);
+    document.getElementById("opacityVal").textContent = state.opacity + "%";
+    saveState();
+    renderPreviews();
+  });
+
+  document.getElementById("borderWidth").addEventListener("input", function (e) {
+    state.borderWidth = Number(e.target.value);
+    document.getElementById("borderWidthVal").textContent = state.borderWidth + "px";
+    saveState();
+    renderPreviews();
+  });
+
+  document.getElementById("activeColor").addEventListener("input", function (e) {
+    state.activeColor = e.target.value;
+    saveState();
+    renderPreviews();
+  });
+
+  document.getElementById("autoArrange").addEventListener("click", autoArrange);
+
+  document.getElementById("resetLayout").addEventListener("click", function () {
+    state.accounts = {};
+    saveState();
+    autoArrange();
+  });
+
+  document.getElementById("openSettingsBtn").addEventListener("click", function () {
+    settingsPanel.classList.remove("closed");
+  });
+  document.getElementById("closeSettingsBtn").addEventListener("click", function () {
+    settingsPanel.classList.add("closed");
+  });
+
+  toggleAllBtn.addEventListener("click", function () {
+    state.enabled = !state.enabled;
+    document.getElementById("enabled").checked = state.enabled;
+    saveState();
+    render();
+  });
+
+  window.addEventListener("resize", function () {
+    // 保持窗口在桌面范围内
+    accounts.forEach(function (account) {
+      const item = ensureAccount(account.name);
+      if (item.left != null) {
+        item.left = clamp(item.left, 0, Math.max(0, desk.clientWidth - 80));
+        item.top = clamp(item.top, 0, Math.max(0, desk.clientHeight - 50));
+      }
+    });
+    saveState();
+    renderPreviews();
+  });
+
+  /* ---------------- 初始化 ---------------- */
+  document.getElementById("enabled").checked = state.enabled;
+  document.getElementById("topmost").checked = state.topmost;
+  document.getElementById("showLabel").checked = state.showLabel;
+  document.getElementById("hideMin").checked = state.hideMin;
+  document.getElementById("defaultW").value = state.defaultW;
+  document.getElementById("defaultH").value = state.defaultH;
+  document.getElementById("opacity").value = state.opacity;
+  document.getElementById("opacityVal").textContent = state.opacity + "%";
+  document.getElementById("borderWidth").value = state.borderWidth;
+  document.getElementById("borderWidthVal").textContent = state.borderWidth + "px";
+  document.getElementById("activeColor").value = state.activeColor;
+
+  accounts.forEach(function (account) { ensureAccount(account.name); });
+  const hasPosition = accounts.some(function (a) { return state.accounts[a.name].left != null; });
+  if (!hasPosition) {
+    autoArrange();
+  } else {
+    render();
+  }
+})();
+</script>
+</body>
+</html>

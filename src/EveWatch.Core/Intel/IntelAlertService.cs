@@ -318,42 +318,40 @@ public sealed class IntelAlertService : IDisposable
         var files = _catalog.Scan(_directory);
         _files = [.. files];
 
-        lock (_sync)
+        // 文件读取与位置解析可能耗时，放在锁外执行，避免界面查询状态时被阻塞。
+        foreach (var position in _positions.Values)
         {
-            foreach (var position in _positions.Values)
+            position.Update(_files, _map);
+        }
+
+        foreach (var runtime in _listeners)
+        {
+            if (!runtime.Listener.Enabled)
             {
-                position.Update(_files, _map);
+                runtime.State = "已停用";
+                runtime.Tail = null;
+                runtime.FilePath = null;
+                continue;
             }
 
-            foreach (var runtime in _listeners)
+            var file = ChatLogCatalog.ResolveListenerFile(_files, runtime.Listener);
+            if (file is null)
             {
-                if (!runtime.Listener.Enabled)
-                {
-                    runtime.State = "已停用";
-                    runtime.Tail = null;
-                    runtime.FilePath = null;
-                    continue;
-                }
-
-                var file = ChatLogCatalog.ResolveListenerFile(_files, runtime.Listener);
-                if (file is null)
-                {
-                    runtime.Tail = null;
-                    runtime.FilePath = null;
-                    runtime.State = "等待日志";
-                    continue;
-                }
-
-                if (runtime.Tail is null
-                    || !string.Equals(runtime.FilePath, file.Path, StringComparison.OrdinalIgnoreCase))
-                {
-                    var startAtEnd = initial || file.LastWriteTime <= _startedAt;
-                    runtime.Tail = new ChatLogTail(file.Path, startAtEnd);
-                    runtime.FilePath = file.Path;
-                }
-
-                runtime.State = "监听中";
+                runtime.Tail = null;
+                runtime.FilePath = null;
+                runtime.State = "等待日志";
+                continue;
             }
+
+            if (runtime.Tail is null
+                || !string.Equals(runtime.FilePath, file.Path, StringComparison.OrdinalIgnoreCase))
+            {
+                var startAtEnd = initial || file.LastWriteTime <= _startedAt;
+                runtime.Tail = new ChatLogTail(file.Path, startAtEnd);
+                runtime.FilePath = file.Path;
+            }
+
+            runtime.State = "监听中";
         }
     }
 
@@ -364,24 +362,22 @@ public sealed class IntelAlertService : IDisposable
             return;
         }
 
-        lock (_sync)
+        // 日志读取与解析不持锁，避免界面状态查询被文件 I/O 阻塞。
+        foreach (var position in _positions.Values)
         {
-            foreach (var position in _positions.Values)
+            position.Update(_files, _map);
+        }
+
+        foreach (var runtime in _listeners)
+        {
+            if (!runtime.Listener.Enabled || runtime.Tail is null)
             {
-                position.Update(_files, _map);
+                continue;
             }
 
-            foreach (var runtime in _listeners)
+            foreach (var line in runtime.Tail.ReadNewLines())
             {
-                if (!runtime.Listener.Enabled || runtime.Tail is null)
-                {
-                    continue;
-                }
-
-                foreach (var line in runtime.Tail.ReadNewLines())
-                {
-                    ProcessLine(runtime, line);
-                }
+                ProcessLine(runtime, line);
             }
         }
     }

@@ -1,0 +1,34 @@
+<Window x:Class="EveWatch.App.Windows.ClientPreviewWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework"
+        Title="客户端预览"
+        Width="260" Height="170" MinWidth="140" MinHeight="100"
+        WindowStyle="None" ResizeMode="CanResize" WindowStartupLocation="Manual"
+        ShowInTaskbar="False" ShowActivated="False" Topmost="True"
+        Background="#FF04060A" SnapsToDevicePixels="True" UseLayoutRounding="True"
+        FontFamily="{StaticResource BodyFont}">
+
+  <shell:WindowChrome.WindowChrome>
+    <shell:WindowChrome CaptionHeight="0" ResizeBorderThickness="7"
+                        GlassFrameThickness="0" CornerRadius="0" UseAeroCaptionButtons="False" />
+  </shell:WindowChrome.WindowChrome>
+
+  <!--
+    完全无边框：DWM 缩略图铺满整个客户区。角色名与焦点描边画在独立的
+    PreviewLabelWindow 覆盖层上，因为 DWM 会盖住同窗口内的 WPF 内容。
+  -->
+  <Grid x:Name="Surface" Background="#FF04060A" Cursor="SizeAll"
+        MouseLeftButtonDown="OnSurfaceMouseLeftButtonDown"
+        MouseRightButtonDown="OnSurfaceMouseRightButtonDown"
+        MouseMove="OnSurfaceMouseMove"
+        MouseRightButtonUp="OnSurfaceMouseRightButtonUp">
+
+    <Border x:Name="ThumbHost" Background="#FF04060A" ClipToBounds="True">
+      <TextBlock x:Name="StatusText" Text="缩略图不可用" Visibility="Collapsed"
+                 HorizontalAlignment="Center" VerticalAlignment="Center"
+                 FontSize="10" Foreground="{StaticResource TextDimBrush}" TextWrapping="Wrap"
+                 TextAlignment="Center" Margin="8,0" IsHitTestVisible="False" />
+    </Border>
+  </Grid>
+</Window>

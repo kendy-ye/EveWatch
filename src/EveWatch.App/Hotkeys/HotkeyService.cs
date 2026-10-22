@@ -63,7 +63,7 @@ public sealed class HotkeyService : IDisposable
 
         foreach (var binding in _config.Current.Hotkeys)
         {
-            var action = HotkeyActions.Find(binding.Action);
+            var action = HotkeyActions.Resolve(binding, _config.Current.ClientGroups);
             if (action is null)
             {
                 continue;
@@ -147,7 +147,7 @@ public sealed class HotkeyService : IDisposable
             return nint.Zero;
         }
 
-        if (HotkeyActions.Find(binding.Action) is { } action)
+        if (HotkeyActions.Resolve(binding, _config.Current.ClientGroups) is { } action)
         {
             Triggered?.Invoke(action);
         }
